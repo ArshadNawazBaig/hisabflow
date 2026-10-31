@@ -42,11 +42,12 @@
 
 .topbar {
   position: fixed;
-  top: 8px;
+  top: 0;
   left: 8px;
   right: 8px;
   z-index: 40;
-  height: var(--navbar-height);
+  height: calc(var(--navbar-height) + 8px);
+  padding-top: 8px;
   background: var(--canvas);
   border-radius: 25px 25px 0 0;
   box-shadow: 0 1px 0 var(--line);
@@ -62,5 +63,5 @@
 
 @media (max-width: 700px) {
   .app-frame { --navbar-height: 76px; }
-  .topbar { top: 0; left: 0; right: 0; border-radius: 0; }
+  .topbar { left: 0; right: 0; height: var(--navbar-height); padding-top: 0; border-radius: 0; }
 }
