@@ -1,0 +1,50 @@
+import type { Workspace } from './types';
+
+/** Fictional examples only. Never seed a visitor's private workspace automatically. */
+export const demoWorkspace: Workspace = {
+  business: 'Nawab Trading Co.', currency: 'PKR', openingCash: '5861220.00',
+  companies: [
+    { id: 'CO-001', name: 'Atlas Textiles', role: 'Customer', contact: '+92 300 000 1001', email: 'accounts@atlas.example', aliases: [], balance: '2180000.00', status: 'Active' },
+    { id: 'CO-002', name: 'Crescent Energy', role: 'Supplier', contact: '+92 300 000 1002', email: 'finance@crescent.example', aliases: [], balance: '-1460000.00', status: 'Active' },
+    { id: 'CO-003', name: 'Riverdale Mills', role: 'Customer', contact: '+92 300 000 1003', aliases: ['Riverdale'], balance: '1560000.00', status: 'Active' },
+    { id: 'CO-004', name: 'Horizon Resources', role: 'Supplier', contact: '+92 300 000 1004', aliases: [], balance: '-1000000.00', status: 'Active' },
+    { id: 'CO-005', name: 'Summit Industries', role: 'Customer', contact: '+92 300 000 1005', aliases: [], balance: '540000.00', status: 'Active' },
+  ],
+  shipments: [
+    { id: 'SHP-00128', direction: 'Dispatch', companyId: 'CO-001', deliveryParty: 'Atlas Textiles', date: '2026-10-31', vehicle: 'LHR-4821', product: 'Imported coal', grade: '5,800 GAR', weight: '28.750', unit: 'tonnes', rate: '41000.00', amount: '1178750.00', status: 'In transit', destination: 'Sheikhupura', transporter: 'Northern Logistics', relatedDocument: 'SALE-00128', matchedId: 'SHP-00121', matchConfirmed: true },
+    { id: 'SHP-00127', direction: 'Receipt', companyId: 'CO-002', deliveryParty: 'Atlas Textiles', date: '2026-10-30', vehicle: 'KHI-7632', product: 'Imported coal', weight: '30.125', unit: 'tonnes', rate: '38200.00', amount: '1150775.00', status: 'Delivered', destination: 'Atlas depot', relatedDocument: 'PUR-00127' },
+    { id: 'SHP-00126', direction: 'Dispatch', companyId: 'CO-003', deliveryParty: 'Riverdale Mills', date: '2026-10-30', vehicle: 'RWP-3098', product: 'Imported coal', weight: '27.500', unit: 'tonnes', rate: '40500.00', amount: '1113750.00', status: 'Delivered', destination: 'Faisalabad', matchedId: 'SHP-00125', matchConfirmed: false },
+    { id: 'SHP-00125', direction: 'Receipt', companyId: 'CO-004', deliveryParty: 'Riverdale Mills', date: '2026-10-30', vehicle: 'RWP-3098', product: 'Imported coal', weight: '27.500', unit: 'tonnes', rate: '39000.00', amount: '1072500.00', status: 'Delivered', notes: 'Potential direct delivery. Review the relationship before recognizing margin.', matchedId: 'SHP-00126', matchConfirmed: false },
+    { id: 'SHP-00124', direction: 'Dispatch', companyId: 'CO-005', deliveryParty: 'Summit Industries', date: '2026-10-29', vehicle: 'FSD-5540', product: 'Steam coal', weight: '0.650', unit: 'tonnes', rate: '40000.00', amount: '26000.00', status: 'Rejected', notes: 'Delivery rejected. Accounting treatment still under review.', settlement: 'Unresolved' },
+    { id: 'SHP-00123', direction: 'Dispatch', companyId: 'CO-001', deliveryParty: 'Atlas Textiles', date: '2026-10-28', vehicle: 'LHR-4821', product: 'Imported coal', weight: '29.200', unit: 'tonnes', rate: '41200.00', amount: '1203040.00', status: 'Delivered', matchedId: 'SHP-00122', matchConfirmed: true },
+    { id: 'SHP-00122', direction: 'Receipt', companyId: 'CO-002', deliveryParty: 'Atlas Textiles', date: '2026-10-28', vehicle: 'LHR-4821', product: 'Imported coal', weight: '29.200', unit: 'tonnes', rate: '38500.00', amount: '1124200.00', status: 'Delivered', matchedId: 'SHP-00123', matchConfirmed: true },
+    { id: 'SHP-00121', direction: 'Receipt', companyId: 'CO-002', deliveryParty: 'Atlas Textiles', date: '2026-10-31', vehicle: 'LHR-4821', product: 'Imported coal', weight: '28.750', unit: 'tonnes', rate: '38200.00', amount: '1098250.00', status: 'Delivered', matchedId: 'SHP-00128', matchConfirmed: true },
+    { id: 'SHP-00120', direction: 'Dispatch', companyId: 'CO-003', deliveryParty: 'Riverdale Mills', date: '2026-10-27', vehicle: 'MUL-2270', product: 'Steam coal', weight: '31.250', unit: 'tonnes', rate: '40750.00', amount: '1273437.50', status: 'Delivered', matchedId: 'SHP-00119', matchConfirmed: true },
+    { id: 'SHP-00119', direction: 'Receipt', companyId: 'CO-004', deliveryParty: 'Riverdale Mills', date: '2026-10-27', vehicle: 'MUL-2270', product: 'Steam coal', weight: '31.250', unit: 'tonnes', rate: '38000.00', amount: '1187500.00', status: 'Delivered', matchedId: 'SHP-00120', matchConfirmed: true },
+  ],
+  payments: [
+    { id: 'PAY-00087', direction: 'Received', date: '2026-10-29', companyId: 'CO-001', actor: 'Atlas Textiles', amount: '50000.00', account: 'Petty cash', bankLabel: '', reference: 'CASH-001', treatment: 'Customer receipt', status: 'Allocated', notes: 'Fictional cash receipt; demo only.' },
+    { id: 'PAY-00086', direction: 'Received', date: '2026-10-31', companyId: 'CO-001', actor: 'Atlas Textiles', amount: '450000.00', account: 'Business current', bankLabel: 'UBL', reference: 'TXN-830194', treatment: 'Customer receipt', status: 'Allocated', notes: 'Partial settlement of the company balance.' },
+    { id: 'PAY-00085', direction: 'Paid', date: '2026-10-30', companyId: 'CO-002', actor: 'Northern Logistics', onBehalfOf: 'CO-002', amount: '85000.00', account: 'Business current', bankLabel: 'MBL', reference: 'FT-52941', treatment: 'Payment on behalf', status: 'Allocated', notes: 'Freight paid on behalf of Crescent Energy; supplier-approved deduction.' },
+    { id: 'PAY-00084', direction: 'Received', date: '2026-10-30', companyId: 'CO-003', actor: 'Riverdale Holdings', onBehalfOf: 'CO-003', amount: '325000.00', account: 'Business current', bankLabel: 'Askari', reference: 'RCV-17403', treatment: 'Customer receipt', status: 'Allocated', notes: 'Third-party remitter with approved company allocation.' },
+    { id: 'PAY-00083', direction: 'Paid', date: '2026-10-29', companyId: 'CO-004', actor: 'Horizon Resources', amount: '600000.00', account: 'Business current', bankLabel: 'UBL', reference: 'TXN-830012', treatment: 'Supplier settlement', status: 'Allocated' },
+    { id: 'PAY-00082', direction: 'Paid', date: '2026-10-28', companyId: 'CO-002', actor: 'Independent Materials Lab', amount: '12500.00', account: 'Petty cash', bankLabel: '', reference: '', treatment: 'Other adjustment', status: 'Needs review', notes: 'Lab testing fee: confirm who bears the cost before allocation.' },
+    { id: 'PAY-00081', direction: 'Paid', date: '2026-10-27', companyId: 'CO-002', actor: 'Warehouse Services', amount: '17500.00', account: 'Petty cash', bankLabel: '', reference: 'CASH-0081', treatment: 'Operating expense', status: 'Allocated', balanceApplied: false, notes: 'Reviewed business warehouse supplies; no supplier settlement effect.' },
+    { id: 'PAY-00080', direction: 'Received', date: '2026-09-25', companyId: 'CO-001', actor: 'Atlas Textiles', amount: '1045000.00', account: 'Business current', bankLabel: 'UBL', reference: 'DEMO-SEP-IN', treatment: 'Customer receipt', status: 'Allocated', balanceApplied: true },
+    { id: 'PAY-00079', direction: 'Paid', date: '2026-09-22', companyId: 'CO-002', actor: 'Crescent Energy', amount: '825000.00', account: 'Business current', bankLabel: 'MBL', reference: 'DEMO-SEP-OUT', treatment: 'Supplier settlement', status: 'Allocated', balanceApplied: true },
+    { id: 'PAY-00078', direction: 'Received', date: '2026-08-26', companyId: 'CO-003', actor: 'Riverdale Mills', amount: '900000.00', account: 'Business current', bankLabel: 'Askari', reference: 'DEMO-AUG-IN', treatment: 'Customer receipt', status: 'Allocated', balanceApplied: true },
+    { id: 'PAY-00077', direction: 'Paid', date: '2026-08-24', companyId: 'CO-004', actor: 'Horizon Resources', amount: '790000.00', account: 'Business current', bankLabel: 'UBL', reference: 'DEMO-AUG-OUT', treatment: 'Supplier settlement', status: 'Allocated', balanceApplied: true },
+    { id: 'PAY-00076', direction: 'Received', date: '2026-07-28', companyId: 'CO-005', actor: 'Summit Industries', amount: '950000.00', account: 'Business current', bankLabel: 'UBL', reference: 'DEMO-JUL-IN', treatment: 'Customer receipt', status: 'Allocated', balanceApplied: true },
+    { id: 'PAY-00075', direction: 'Paid', date: '2026-07-21', companyId: 'CO-002', actor: 'Crescent Energy', amount: '710000.00', account: 'Business current', bankLabel: 'MBL', reference: 'DEMO-JUL-OUT', treatment: 'Supplier settlement', status: 'Allocated', balanceApplied: true },
+    { id: 'PAY-00074', direction: 'Received', date: '2026-06-25', companyId: 'CO-001', actor: 'Atlas Textiles', amount: '800000.00', account: 'Business current', bankLabel: 'UBL', reference: 'DEMO-JUN-IN', treatment: 'Customer receipt', status: 'Allocated', balanceApplied: true },
+    { id: 'PAY-00073', direction: 'Paid', date: '2026-06-18', companyId: 'CO-004', actor: 'Horizon Resources', amount: '600000.00', account: 'Business current', bankLabel: 'Askari', reference: 'DEMO-JUN-OUT', treatment: 'Supplier settlement', status: 'Allocated', balanceApplied: true },
+    { id: 'PAY-00072', direction: 'Received', date: '2026-05-26', companyId: 'CO-003', actor: 'Riverdale Mills', amount: '680000.00', account: 'Business current', bankLabel: 'UBL', reference: 'DEMO-MAY-IN', treatment: 'Customer receipt', status: 'Allocated', balanceApplied: true },
+    { id: 'PAY-00071', direction: 'Paid', date: '2026-05-19', companyId: 'CO-002', actor: 'Crescent Energy', amount: '540000.00', account: 'Business current', bankLabel: 'MBL', reference: 'DEMO-MAY-OUT', treatment: 'Supplier settlement', status: 'Allocated', balanceApplied: true },
+  ],
+  imports: [],
+  audit: [
+    { id: 'AUD-DEMO-1', at: '2026-10-31T10:35:00+05:00', action: 'Payment allocated', detail: 'PAY-00086 · Atlas Textiles · PKR 450,000.00', actor: 'Demo user' },
+    { id: 'AUD-DEMO-2', at: '2026-10-31T09:20:00+05:00', action: 'Delivery recorded', detail: 'SHP-00128 · LHR-4821 · 28.750 tonnes', actor: 'Demo user' },
+    { id: 'AUD-DEMO-3', at: '2026-10-30T15:10:00+05:00', action: 'Match awaiting review', detail: 'SHP-00126 ↔ SHP-00125 · RWP-3098', actor: 'Demo user' },
+  ],
+};
