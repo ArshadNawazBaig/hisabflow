@@ -4,12 +4,14 @@ const browser=await chromium.launch({executablePath:'/Applications/Google Chrome
 const page=await browser.newPage({viewport:{width:1440,height:1000}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 try{
+ const workspaceReady=page.waitForResponse(r=>r.url().endsWith('/api/workspace'));
  await page.goto('http://127.0.0.1:5173/',{waitUntil:'domcontentloaded'});
+ await workspaceReady;
  await page.getByRole('heading',{name:'Welcome back.',exact:true}).waitFor();
  await page.locator('.top-navigation').getByRole('button',{name:'Companies',exact:true}).click();
+ await page.getByRole('heading',{name:'Companies',exact:true}).waitFor();
  await page.getByRole('button',{name:'Add company',exact:true}).click();
  let modal=page.locator('.rv-modal');
- console.log('company labels',await modal.locator('label').allTextContents());
  await modal.locator('input[name="name"]').fill('QA Synthetic Customer');
  await modal.locator('select[name="role"]').selectOption('Customer');
  await modal.getByRole('button',{name:/Save company|Add company|Create company/}).click();
@@ -28,7 +30,6 @@ try{
  assert.match(await companyRow.textContent(),/125\.63/);
  await page.locator('.top-navigation').getByRole('button',{name:'Payments',exact:true}).click();
  await page.getByRole('button',{name:/Record payment|Add payment/}).first().click();modal=page.locator('.rv-modal');
- console.log('payment labels',await modal.locator('label').allTextContents());
  await modal.locator('select[name="companyId"]').selectOption({label:'QA Synthetic Customer'});
  await modal.locator('input[name="actor"]').fill('QA Third-party Remitter');
  await modal.locator('input[name="amount"]').fill('25.63');
