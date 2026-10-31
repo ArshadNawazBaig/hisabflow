@@ -9,3 +9,27 @@
 @media(min-width:1200px){.main-content{padding-top:9px}.page-heading{margin-bottom:20px}.page-heading .eyebrow{font-size:8px;margin-bottom:7px}.page-heading h1{font-size:36px}.overview-topline{margin-bottom:13px}.heading-actions{padding-top:9px}.balance-value{font-size:34px}.metric-value{font-size:28px}.metric-card{padding:16px 14px}.metric-value>small{font-size:10px}.metric-footer{font-size:7px}.overview-left-stack{gap:15px}.activity-table td{padding-top:17px;padding-bottom:17px}.company-preview{padding-top:14px;padding-bottom:14px}}
 @media(max-width:430px){.metric-value{font-size:24px;letter-spacing:-.9px;gap:3px}.metric-value>small{font-size:9px}.metric-card{padding:15px 12px}.metric-label{font-size:10px}.metric-footer{font-size:7px}.metric-label>span{height:23px;width:23px}.balance-value{font-size:35px}}
 @media(min-width:1100px) and (max-width:1439px){.summary-grid{grid-template-columns:1fr 1.03fr 1.12fr}.cashflow-panel{grid-column:auto}.cashflow-chart{height:172px}.chart-bars{gap:13px}.bar-stack{max-width:29px}.balance-panel{padding:19px}.balance-value{font-size:30px}.metric-card{padding:14px 11px}.metric-value{font-size:23px;gap:3px;margin-top:21px}.metric-value>small{font-size:9px}.metric-label{font-size:10px}.metric-footer{font-size:6.7px}.accounts-section{padding:12px 9px 9px}.account-mini-card{padding:10px 8px!important}.account-mini-card>b{font-size:12px}.account-mini-card>div{font-size:7px}.balance-actions{margin:19px 0 20px}.overview-bottom-grid{grid-template-columns:1fr 2.2fr}}
+
+/* Anchor the desktop rail to the viewport, including the frame's 8px inset. */
+@media (min-width: 701px) {
+  .side-rail {
+    position: fixed;
+    top: 124px;
+    left: 25px;
+    bottom: 31px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+
+  .side-rail > * { flex-shrink: 0; }
+  .side-rail::-webkit-scrollbar { display: none; }
+}
+
+@media (min-width: 701px) and (max-width: 950px) {
+  .side-rail { top: 119px; left: 21px; }
+}
+
+@media (min-width: 1440px) {
+  .side-rail { top: 148px; left: 32px; }
+}
