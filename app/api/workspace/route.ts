@@ -1,23 +1,25 @@
 import { env } from 'cloudflare:workers';
-import { getChatGPTUser } from '../../chatgpt-auth';
+import { getWorkspaceUser, authErrorResponse, AUTH_RESPONSE_HEADERS } from '@/lib/server/auth';
 import { validatePostedChanges, validateWorkspaceRecords } from '@/lib/accounting';
 import { saveSchema } from '@/lib/workspace-validation';
 import type { Workspace } from '@/lib/types';
 import { getWorkspaceStore, configuredWorkspaceProvider, workspaceStorageMessage } from '@/lib/server/workspace-store';
 
 export const dynamic = 'force-dynamic';
-const json = (value: unknown, status = 200) => Response.json(value, { status, headers: { 'Cache-Control': 'no-store' } });
+const json = (value: unknown, status = 200) => Response.json(value, { status, headers: AUTH_RESPONSE_HEADERS });
 export async function GET() {
-  const user = await getChatGPTUser();
+  let user: Awaited<ReturnType<typeof getWorkspaceUser>>;
+  try { user = await getWorkspaceUser(); } catch (error) { return authErrorResponse(error); }
   if (!user) return json({ error: 'Sign in to access your private business workspace.' }, 401);
   try {
     const row = await getWorkspaceStore().get(user.userId);
-    return json({ data: row?.data ?? null, revision: row?.revision ?? 0, storage: configuredWorkspaceProvider(), user: { name: user.displayName, email: user.email } });
+    return json({ data: row?.data ?? null, revision: row?.revision ?? 0, storage: configuredWorkspaceProvider(), user: { name: user.displayName, email: user.email, provider: user.provider, canLinkGoogle: user.canLinkGoogle } });
   } catch (error) { return json({ error: workspaceStorageMessage(error) }, 503); }
 }
 
 export async function PUT(request: Request) {
-  const user = await getChatGPTUser();
+  let user: Awaited<ReturnType<typeof getWorkspaceUser>>;
+  try { user = await getWorkspaceUser(); } catch (error) { return authErrorResponse(error); }
   if (!user) return json({ error: 'Sign in before saving business records.' }, 401);
   const origin = request.headers.get('origin');
   if (origin && origin !== new URL(request.url).origin) return json({ error: 'Cross-origin writes are not allowed.' }, 403);

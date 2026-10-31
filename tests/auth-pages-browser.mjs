@@ -1,0 +1,64 @@
+import { chromium } from '@playwright/test';
+import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
+
+const base='http://127.0.0.1:5173';
+await mkdir('outputs',{recursive:true});
+const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+try{
+  const context=await browser.newContext({viewport:{width:1440,height:1000}});
+  for(const options of [{path:'/'},{path:'/?_rsc',headers:{RSC:'1'}},{path:'/',headers:{'oai-authenticated-user-id':'forged-owner','oai-authenticated-user-email':'forged@example.invalid',Cookie:'__sites_local_auth=1'}}]){
+    const {path,...requestOptions}=options;
+    const response=await context.request.get(base+path,{...requestOptions,maxRedirects:0});
+    assert.equal(response.status(),307);
+    assert.equal(response.headers().location,'/login');
+    assert.match(response.headers()['cache-control'],/no-store/);
+    assert.equal(await response.text(),'');
+  }
+  assert.equal((await context.request.get(base+'/api/workspace')).status(),401);
+  const page=await context.newPage();
+  const privateRequests=[];page.on('request',request=>{if(new URL(request.url()).pathname==='/api/workspace')privateRequests.push(request.url());});
+  await page.goto(base+'/',{waitUntil:'networkidle'});
+  assert.equal(new URL(page.url()).pathname,'/login');
+  await page.getByRole('heading',{name:'Welcome back.'}).waitFor();
+  assert.equal(await page.locator('.app-frame').count(),0);
+  assert.equal(await page.getByText(/demo|sample workspace|fictional|ChatGPT/i).count(),0);
+  assert.equal(privateRequests.length,0);
+  assert.equal(await page.locator('form[action="/auth/google"][method="post"] input[name="intent"]').inputValue(),'signin');
+  assert.equal(await page.locator('input[type="password"]').count(),0);
+  await page.screenshot({path:'outputs/login-desktop.png',animations:'disabled'});
+  await page.setViewportSize({width:390,height:844});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await page.screenshot({path:'outputs/login-mobile.png',animations:'disabled'});
+  await page.getByRole('link',{name:'Create account',exact:true}).first().click();
+  await page.getByRole('heading',{name:'Create your workspace.'}).waitFor();
+  assert.equal(new URL(page.url()).pathname,'/signup');
+  assert.equal(await page.getByRole('button',{name:'Create account with Google',exact:true}).count(),1);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await page.evaluate(()=>localStorage.setItem('hisab-theme','dark'));
+  await page.reload({waitUntil:'networkidle'});
+  await page.screenshot({path:'outputs/signup-mobile-dark.png',animations:'disabled'});
+  await page.goto(base+'/signin',{waitUntil:'networkidle'});
+  await page.getByRole('heading',{name:'Welcome back.'}).waitFor();
+  await context.addCookies([{name:'hisabflow-auth-provider',value:'google',url:base,httpOnly:true}]);
+  await page.goto(base+'/',{waitUntil:'networkidle'});
+  assert.equal(new URL(page.url()).pathname,'/login');
+  assert.equal(new URL(page.url()).searchParams.get('auth_error'),'session_invalid');
+  await page.getByRole('alert').filter({hasText:'Reset sign-in'}).waitFor();
+  await page.getByRole('button',{name:'Reset sign-in',exact:true}).click();
+  await page.waitForURL(base+'/login');
+  assert.equal(await page.getByRole('alert').count(),0);
+  const started=await context.request.post(base+'/auth/google',{headers:{Origin:base},form:{intent:'signin'},maxRedirects:0});
+  assert.equal(started.status(),303);
+  const authorize=new URL(started.headers().location);
+  assert.equal(authorize.origin,'https://coeazyvaghocoxuzngcc.supabase.co');
+  assert.equal(authorize.searchParams.get('redirect_to'),base+'/auth/callback');
+  assert.equal(authorize.searchParams.get('code_challenge_method'),'s256');
+  const cancelled=await context.request.get(base+'/auth/callback?error=access_denied',{maxRedirects:0});
+  assert.equal(cancelled.status(),303);
+  assert.equal(cancelled.headers().location,'/login?auth_error=cancelled');
+  const replayed=await context.request.get(base+'/auth/callback?code=invalid',{maxRedirects:0});
+  assert.equal(replayed.headers().location,'/login?auth_error=expired');
+  console.log('PASS server/RSC redirects, no dashboard or demo before login, Google-only login/signup/signin, mobile/dark layout, invalid-session recovery, and OAuth callback routing.');
+  await context.close();
+}finally{await browser.close();}

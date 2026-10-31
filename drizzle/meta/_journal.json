@@ -15,6 +15,13 @@
       "when": 1793468832163,
       "tag": "0001_easy_maestro",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793471612055,
+      "tag": "0002_gifted_lucky_pierre",
+      "breakpoints": true
     }
   ]
 }

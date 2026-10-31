@@ -3,3 +3,6 @@
 WORKSPACE_STORAGE_PROVIDER=d1
 SUPABASE_URL=https://coeazyvaghocoxuzngcc.supabase.co
 SUPABASE_SECRET_KEY=
+SUPABASE_PUBLISHABLE_KEY=
+# Use the actual HTTPS origin after deploying to your own hosting account.
+HISABFLOW_APP_ORIGIN=http://127.0.0.1:5173

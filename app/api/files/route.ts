@@ -1,10 +1,11 @@
 import { env } from 'cloudflare:workers';
-import { getChatGPTUser } from '../../chatgpt-auth';
+import { getWorkspaceUser, authErrorResponse, AUTH_RESPONSE_HEADERS } from '@/lib/server/auth';
 
 export const dynamic = 'force-dynamic';
-const json = (value:unknown,status=200) => Response.json(value,{status,headers:{'Cache-Control':'no-store'}});
+const json = (value:unknown,status=200) => Response.json(value,{status,headers:AUTH_RESPONSE_HEADERS});
 export async function POST(request: Request) {
-  const user = await getChatGPTUser();
+  let user: Awaited<ReturnType<typeof getWorkspaceUser>>;
+  try { user = await getWorkspaceUser(); } catch (error) { return authErrorResponse(error); }
   if (!user) return json({error:'Sign in to upload private documents.'},401);
   if (!env.BUCKET) return json({error:'Private file storage is not available yet.'},503);
   const origin = request.headers.get('origin');
@@ -25,7 +26,8 @@ export async function POST(request: Request) {
   } catch { return json({error:'The private file could not be uploaded. Please retry.'},503); }
 }
 export async function GET(request: Request) {
-  const user = await getChatGPTUser();
+  let user: Awaited<ReturnType<typeof getWorkspaceUser>>;
+  try { user = await getWorkspaceUser(); } catch (error) { return authErrorResponse(error); }
   if (!user) return json({error:'Sign in to view private documents.'},401);
   if (!env.BUCKET) return json({error:'Private file storage is not available yet.'},503);
   const key = new URL(request.url).searchParams.get('key');

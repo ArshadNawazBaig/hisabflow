@@ -1,22 +1,23 @@
 # HisabFlow
 
-Private business workspace inspired by the supplied finance dashboard reference. Built with React/TypeScript on the Sites Vinext starter, Cloudflare Workers, D1 or Supabase PostgreSQL, and private R2 document storage. No earlier master specification or application source was supplied, so this is a new implementation rather than a migration of an existing stack.
+Private business workspace inspired by the supplied finance dashboard reference. Built with React/TypeScript, Vinext, Cloudflare Workers, Supabase Google authentication and PostgreSQL, D1 identity storage, and private R2 documents. App visitors sign in with Google; no OpenAI account is required by the application.
 
 ## Run
 
-Node 22.13+ is required. Run `npm ci`, `npm run build`, apply the generated SQL migration locally, then `npm run dev`. The local sign-in page is `/signin-with-chatgpt?return_to=/`. Local development uses the starter's simulated identity; hosted identity and private site access are managed by Sites.
+Node 22.13+ is required. Run `npm ci`, `npm run build`, apply all pending local SQL migrations once, then `npm run dev`. Add the Supabase URL, publishable key, and server secret privately using `.dev.vars.example` or an ignored `.env`. Signed-out visitors are redirected to `/login`; `/signin` offers the same Google sign-in screen, and `/signup` provides account creation. Local development uses real Supabase Google OAuth. Allow `http://127.0.0.1:5173/auth/callback` in Supabase Authentication → URL Configuration.
 
 ```sh
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_special_frog_thor.sql
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_easy_maestro.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0002_gifted_lucky_pierre.sql
 npm run dev
 ```
 
-The browser starts with explicitly fictional, unsaved sample data. **Start your workspace** creates an empty private workspace. Sample records are never copied into a user's business automatically. Hosted structured records use an owner-scoped snapshot with optimistic revisions. D1 remains active until Supabase is configured and verified; the Supabase adapter and migration preserve the same snapshot and accounting validations. Each accepted save appends a server-authored audit event. Source files live in owner-scoped R2 paths and require authentication to retrieve.
+The dashboard is protected before HTML or RSC rendering. The request proxy verifies Google identity and persists refreshed cookies before rendering; API routes independently verify every data and document request. The app contains no demo fallback. New authenticated users explicitly create an empty workspace; loading and storage errors never substitute sample records. Structured records use an owner-scoped snapshot with optimistic revisions. The Supabase adapter preserves accounting validations, and each accepted save appends a server-authored audit event. Source files live in owner-scoped R2 paths and require authentication to retrieve.
 
 ## Supabase connection
 
-The selected project is `coeazyvaghocoxuzngcc`. Follow [the Supabase setup guide](docs/supabase.md) to apply its additive PostgreSQL migration, configure the server-only credential, verify access, and activate the provider. `npm run check:supabase` performs a non-writing read/RPC readiness probe using ignored `.dev.vars` or server environment values. It does not activate Supabase or replace a controlled create/update check. No dashboard URL or prepared code alone is treated as a live connection. Existing D1 data is frozen by per-owner SQL write guards before copying; original files remain in R2.
+The selected project is `coeazyvaghocoxuzngcc`. Follow [the Supabase setup guide](docs/supabase.md) for schema, private credentials, and validation. `npm run check:supabase` performs a non-writing read/RPC readiness probe using ignored `.dev.vars`, `.env`, or server environment values. It does not replace a controlled create/update check. Existing D1 data is frozen by per-owner SQL write guards before copying; original files remain in R2. A hosting or identity change does not automatically transfer legacy owners or documents.
 
 ## Implemented workflows
 
@@ -30,12 +31,14 @@ The selected project is `coeazyvaghocoxuzngcc`. Follow [the Supabase setup guide
 
 ## Validation
 
-`npx tsc --noEmit` checks TypeScript. `node --experimental-strip-types --test tests/*.test.mjs` exercises decimal arithmetic, source reconciliation, review gates, duplication, ownership-sensitive evidence, classifications, rejected deliveries, missing costs, immutable postings, and atomic effects. Browser QA uses the installed system Chrome through Playwright; scripts under `tests/` document the UI checks.
+`npx tsc --noEmit` checks TypeScript. `node --experimental-strip-types --test tests/*.test.mjs` exercises accounting, source reconciliation, immutable postings, identity isolation, OAuth state, and fixed authentication feedback. `node tests/auth-pages-browser.mjs` verifies server/RSC redirects, Google-only login pages, callback routing, invalid-session recovery, and mobile layouts against the running local app using installed system Chrome.
 
-The user supplied PDF descriptions and aggregate totals, not the original PDFs. Aggregate arithmetic is tested and labeled as brief evidence. Synthetic fixtures test source-order transitions and anomalies; reproducing every transition from the actual two PDFs requires those original files. No real private company rows are shipped in the demo.
+`node tests/controls-browser.mjs` checks the shared custom dropdowns, date pickers, and account suggestions in a separate loopback component harness. It covers form values, validation, keyboard selection, reset, mobile/dark layouts, and the delivery, payment, report, and import screens without accessing real workspaces or changing the app's login guard.
+
+The user supplied PDF descriptions and aggregate totals, not the original PDFs. Aggregate arithmetic is tested and labeled as brief evidence. Synthetic fixtures test source-order transitions and anomalies; reproducing every transition from the actual two PDFs requires those original files. No sample workspace is served by the app.
 
 ## Scope
 
 This is a focused trading and statement-review application, not a complete statutory general ledger, tax filing system, inventory costing engine, or subscription billing system. No previous authentication/billing implementation was available to preserve. One authenticated owner has one business workspace in this version. Opening balances require a reviewed cutoff; changing the default currency does not convert existing amounts. Individual invoices/payment terms and complex quantity adjustments are not fabricated from ledger evidence.
 
-Production publishing uses the Sites plugin workflow and preserves private access. Do not commit `.wrangler/`, `.sites-runtime/`, `.env*`, source uploads, credentials, or local QA data.
+The Google-only version is prepared for direct Cloudflare hosting under Arshad's account; see [hosting setup](docs/hosting.md). It has not been published to the former `chatgpt.site` address. Production requires the exact new HTTPS `HISABFLOW_APP_ORIGIN` and `<origin>/auth/callback` allowed in Supabase. Do not commit `.cloudflare/`, `.wrangler/`, `.sites-runtime/`, `.env*`, uploads, credentials, or local QA data.

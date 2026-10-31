@@ -26,6 +26,16 @@
   --surface-subtle: #f6f8f2;
   --surface-field: #fff;
   --border-subtle: #e3e9dc;
+  --field-height: 48px;
+  --field-compact-height: 44px;
+  --field-radius: 9px;
+  --field-font-size: 16px;
+  --field-line-height: 1.5;
+  --field-padding-y: 11px;
+  --field-padding-x: 12px;
+  --field-border-color: #e1e8d8;
+  --field-focus-border: #8cb853;
+  --field-focus-ring: 0 0 0 3px #b5db7e22;
   --muted: var(--text-muted);
 }
 
@@ -49,6 +59,7 @@
   --surface-subtle: #303c2b;
   --surface-field: #293128;
   --border-subtle: #49583e;
+  --field-border-color: #48593b;
 }
 
 body { font-size: 14px; font-weight: 500; line-height: 1.5; font-variant-numeric: tabular-nums; }
@@ -69,7 +80,10 @@ h1 { font-size: 36px; line-height: 1.25; }
 .button-secondary:hover, .button-outline:hover, .button-soft:hover { background: var(--surface-subtle); color: var(--text-secondary); }
 input::placeholder, textarea::placeholder { color: var(--text-muted); opacity: 1; }
 .demo-label, .save-status, .workspace-tag, .date-selector, .date-selector select, .currency-chip { font-size: 12px; color: var(--text-secondary); }
-.date-selector { min-height: 36px; }
+.date-selector { min-height: var(--field-compact-height); padding: 0 var(--field-padding-x); border-color: var(--field-border-color); border-radius: var(--field-radius); background: var(--surface-field); }
+.date-selector .hf-control-trigger { min-height: calc(var(--field-compact-height) - 2px); padding: 9px 0; border: 0; background: transparent; }
+.date-selector:focus-within { border-color: var(--field-focus-border); box-shadow: var(--field-focus-ring); }
+.date-selector .hf-control-trigger:focus-visible, .date-selector .hf-control-trigger[data-popup-open] { outline: none; box-shadow: none; }
 .save-status.error { color: var(--text-red); }
 
 .card-topline, .metric-label { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
@@ -93,7 +107,7 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); opacity: 1
 
 .panel-heading h2, h2.section-title, .activities-header h2 { font-size: 18px; line-height: 1.4; font-weight: 600; }
 .panel-heading p, .activities-header p { font-size: 13px; line-height: 1.55; color: var(--text-secondary); }
-.chart-period { color: var(--text-secondary); padding: 6px 7px; }
+.chart-period { color: var(--text-secondary); padding: 0; border: 0; }
 .chart-period select { font-size: 12px; }
 .chart-legend { font-size: 12px; gap: 12px; color: var(--text-secondary); }
 .chart-legend > small { font-size: 12px; color: var(--text-muted); }
@@ -128,7 +142,9 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); opacity: 1
 .activity-tabs > button { font-size: 13px; font-weight: 500; color: var(--text-muted); flex-shrink: 0; }
 .activity-tabs > button.active { color: var(--text-primary); font-weight: 600; }
 .activity-tools { min-width: 0; }
-.search-field input, .search-field.compact input { font-size: 14px; }
+.search-field, .search-field.compact, .rv-search { min-height: var(--field-compact-height); padding: 9px var(--field-padding-x); border: 1px solid var(--field-border-color); border-radius: var(--field-radius); background: var(--surface-field); }
+.search-field:focus-within, .rv-search:focus-within { border-color: var(--field-focus-border); box-shadow: var(--field-focus-ring); }
+.search-field input, .search-field.compact input, .rv-search input { font-size: var(--field-font-size); font-weight: 500; line-height: var(--field-line-height); }
 .search-field input::placeholder { color: var(--text-muted); opacity: 1; }
 .search-field.compact input { width: 100px; }
 .filter-button { height: 36px; width: 36px; }
@@ -168,8 +184,14 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); opacity: 1
 .modal h2 { font-size: 26px; font-weight: 600; }
 .modal > p { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
 .field { font-size: 14px; color: var(--text-secondary); font-weight: 600; }
-.field input, .field select, .field textarea { font-size: 16px; font-weight: 500; color: var(--text-primary); min-height: 44px; background: var(--surface-field); }
-.field input::placeholder, .field textarea::placeholder { font-size: 14px; color: var(--text-muted); opacity: 1; }
+.field input:where(:not([type=hidden], [aria-hidden=true], .hf-combobox-input)), .field select, .field textarea {
+  width: 100%; min-width: 0; min-height: var(--field-height); padding: var(--field-padding-y) var(--field-padding-x);
+  border: 1px solid var(--field-border-color); border-radius: var(--field-radius); background: var(--surface-field); color: var(--text-primary);
+  font-family: inherit; font-size: var(--field-font-size); font-weight: 500; line-height: var(--field-line-height); outline: none; box-shadow: none;
+}
+.field input:where(:not([type=hidden], [aria-hidden=true], .hf-combobox-input)):focus, .field select:focus, .field textarea:focus { border-color: var(--field-focus-border); box-shadow: var(--field-focus-ring); }
+.field :is(input, select, textarea):where(:not([aria-hidden=true], .hf-combobox-input)):disabled { cursor: not-allowed; opacity: .55; }
+.field input::placeholder, .field textarea::placeholder { font-size: var(--field-font-size); color: var(--text-muted); opacity: 1; }
 .info-note { font-size: 13px; color: var(--text-secondary); background: var(--surface-subtle); border-color: var(--border-subtle); }
 .getting-started > div > span { font-size: 13px; color: var(--text-secondary); background: var(--surface-subtle); }
 .getting-started b { font-size: 14px; font-weight: 600; }

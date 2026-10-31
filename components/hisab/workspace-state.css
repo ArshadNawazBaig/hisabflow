@@ -1,0 +1,61 @@
+.workspace-state {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: var(--canvas);
+  color: var(--text-primary);
+}
+.workspace-state-card {
+  width: min(100%, 500px);
+  min-width: 0;
+  padding: 42px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  background: var(--paper);
+  text-align: center;
+}
+.workspace-state-logo { display: block; width: 46px; height: 46px; margin: 0 auto 28px; }
+.workspace-state-card > svg { display: block; margin: 0 auto 17px; color: var(--text-green); }
+.workspace-state-card > .lucide-circle-alert { color: var(--text-amber); }
+.workspace-state .workspace-state-card h1 { font-size: 29px; line-height: 1.3; letter-spacing: -1px; font-weight: 600; margin: 0; }
+.workspace-state-card > p { color: var(--text-secondary); font-size: 14px; line-height: 1.75; max-width: 38ch; margin: 14px auto 0; overflow-wrap: anywhere; }
+.workspace-state-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; margin-top: 27px; }
+.workspace-state-actions .button { min-height: 43px; font-size: 14px; }
+.workspace-state-actions .auth-signout-form { margin: 0; }
+.workspace-state-actions .auth-signout-form button { width: auto; min-height: 43px; justify-content: center; padding: 10px 15px; border: 1px solid var(--border-subtle); color: var(--text-secondary); background: var(--paper); font-size: 14px; font-weight: 600; }
+.workspace-state-actions .auth-signout-form button:hover { background: var(--surface-subtle); }
+.workspace-onboarding { text-align: left; }
+.workspace-onboarding .workspace-state-logo { margin: 0 0 28px; }
+.workspace-state-eyebrow { display: block; margin-bottom: 13px; font-size: 12px; line-height: 1.6; letter-spacing: 1.45px; font-weight: 600; color: var(--text-muted); }
+.workspace-onboarding > p { margin-left: 0; margin-right: 0; }
+.workspace-signed-in { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 8px 11px; margin-top: 20px; border-radius: 9px; background: var(--surface-subtle); color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
+.workspace-signed-in svg { flex-shrink: 0; }
+.workspace-signed-in span { min-width: 0; overflow-wrap: anywhere; }
+.workspace-onboarding > form:not(.auth-signout-form) { display: grid; gap: 20px; margin-top: 27px; }
+.workspace-onboarding .field { display: grid; gap: 8px; margin: 0; min-width: 0; color: var(--text-secondary); font-size: 14px; font-weight: 600; }
+.workspace-onboarding .field input, .workspace-onboarding .field select { max-width: 100%; margin: 0; }
+
+.workspace-onboarding > form > .button { min-height: 47px; width: 100%; font-size: 14px; margin-top: 3px; }
+.workspace-state-card .workspace-create-error { max-width: none; margin: 18px 0 0; padding: 12px 14px; border-radius: 10px; background: var(--status-red-bg); color: var(--status-red-text); font-size: 14px; line-height: 1.65; }
+.workspace-onboarding > .auth-signout-form { margin-top: 18px; }
+.workspace-onboarding > .auth-signout-form button { justify-content: center; width: 100%; min-height: 40px; padding: 8px; font-size: 14px; color: var(--text-muted); }
+.workspace-state button:where(:not(.hf-control-trigger)):focus-visible { outline: 3px solid #88b657; outline-offset: 3px; }
+
+@media (max-width: 520px) {
+  .workspace-state { padding: 24px 18px; align-items: center; }
+  .workspace-state-card { padding: 29px 24px; border-radius: 16px; }
+  .workspace-state .workspace-state-card h1 { font-size: 27px; letter-spacing: -.85px; }
+  .workspace-state-logo { width: 42px; height: 42px; margin-bottom: 24px; }
+  .workspace-onboarding .workspace-state-logo { margin-bottom: 25px; }
+  .workspace-state-card > p { font-size: 14px; }
+  .workspace-state-eyebrow { letter-spacing: 1.2px; }
+  .workspace-state-actions { gap: 10px; }
+  .workspace-state-actions > .button, .workspace-state-actions .auth-signout-form { width: 100%; }
+  .workspace-state-actions .auth-signout-form button { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workspace-state .spin { animation: none; }
+}

@@ -340,13 +340,17 @@
   resize:vertical;
   width:100%;
   margin-top:10px;
-  border:1px solid var(--line);
-  border-radius:10px;
-  padding:12px;
-  font-size:16px;
-  line-height:1.8;
-  color:var(--text-secondary);
-  background:var(--soft);
+  min-height:var(--field-height);
+  border:1px solid var(--field-border-color);
+  border-radius:var(--field-radius);
+  padding:var(--field-padding-y) var(--field-padding-x);
+  font-family:inherit;
+  font-size:var(--field-font-size);
+  font-weight:500;
+  line-height:var(--field-line-height);
+  color:var(--text-primary);
+  background:var(--surface-field);
+  outline:none;
   box-sizing:border-box;
 }
 .import-inline-note {
@@ -470,27 +474,15 @@
   gap:8px;
   min-width:0;
 }
+.field.import-field { margin:0; }
 .import-field>span {
   font-size:14px;
   color:var(--text-secondary);
   font-weight:500;
 }
-.import-field input,.import-field select {
-  border:1px solid var(--line);
-  background:var(--paper);
-  border-radius:9px;
-  padding:11px 12px;
-  min-height:39px;
-  color:var(--text-secondary);
-  font-size:16px;
-  font-family:inherit;
-  box-sizing:border-box;
-  width:100%;
-  outline:none;
-}
-.import-field input:focus,.import-field select:focus,.import-paste textarea:focus {
-  border-color:#99be6a;
-  box-shadow:0 0 0 3px var(--status-green-bg);
+.import-paste textarea:focus {
+  border-color:var(--field-focus-border);
+  box-shadow:var(--field-focus-ring);
 }
 .import-field input.source-value {
   color:var(--text-muted);
@@ -1390,15 +1382,8 @@
   font-weight:500;
   color:var(--text-secondary);
 }
-.import-field input,.import-field select,.import-paste textarea,.import-column-grid select {
-  font-size:16px;
-  line-height:1.5;
-  min-height:44px;
-  color:var(--text-primary);
-  background:var(--paper);
-}
-.import-field input::placeholder,.import-paste textarea::placeholder {
-  font-size:14px;
+.import-paste textarea::placeholder {
+  font-size:var(--field-font-size);
   color:var(--text-muted);
   opacity:1;
 }

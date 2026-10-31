@@ -5,5 +5,7 @@ declare namespace Cloudflare {
     WORKSPACE_STORAGE_PROVIDER?: 'd1' | 'supabase';
     SUPABASE_URL?: string;
     SUPABASE_SECRET_KEY?: string;
+    SUPABASE_PUBLISHABLE_KEY?: string;
+    HISABFLOW_APP_ORIGIN?: string;
   }
 }
