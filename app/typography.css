@@ -66,6 +66,8 @@ h1 { font-size: 36px; line-height: 1.25; }
 .page-heading p { font-size: 14px; line-height: 1.65; color: var(--text-secondary); }
 .button, .button.small, .balance-actions .button, .activities-header .button { font-size: 14px; font-weight: 600; min-height: 40px; }
 .button-secondary, .button-outline, .button-soft { color: var(--text-secondary); }
+.button-secondary:hover, .button-outline:hover, .button-soft:hover { background: var(--surface-subtle); color: var(--text-secondary); }
+input::placeholder, textarea::placeholder { color: var(--text-muted); opacity: 1; }
 .demo-label, .save-status, .workspace-tag, .date-selector, .date-selector select, .currency-chip { font-size: 12px; color: var(--text-secondary); }
 .date-selector { min-height: 36px; }
 .save-status.error { color: var(--text-red); }
@@ -149,6 +151,7 @@ h1 { font-size: 36px; line-height: 1.25; }
 .pagination-button, .table-footer > div > span { width: 30px; height: 30px; }
 .table-footer > div > span { background: var(--surface-subtle); color: var(--text-secondary); }
 .pagination-button { color: var(--text-secondary); }
+.activity-table .row-selected { background: var(--surface-subtle); }
 .theme-switch button.selected { background: var(--surface-subtle); color: var(--text-secondary); }
 .activity-bottom-note { flex-wrap: wrap; }
 .app-footer > span { align-items: flex-start; }
@@ -168,12 +171,13 @@ h1 { font-size: 36px; line-height: 1.25; }
 .field input, .field select, .field textarea { font-size: 16px; font-weight: 500; color: var(--text-primary); min-height: 44px; background: var(--surface-field); }
 .field input::placeholder, .field textarea::placeholder { font-size: 14px; color: var(--text-muted); opacity: 1; }
 .info-note { font-size: 13px; color: var(--text-secondary); background: var(--surface-subtle); border-color: var(--border-subtle); }
-.getting-started > div > span { font-size: 13px; }
+.getting-started > div > span { font-size: 13px; color: var(--text-secondary); background: var(--surface-subtle); }
 .getting-started b { font-size: 14px; font-weight: 600; }
 .getting-started p { font-size: 13px; color: var(--text-muted); }
 .command-search input { font-size: 16px; }
 kbd { font-size: 12px; color: var(--text-muted); }
 .search-suggestions > button, .search-results > button { font-size: 14px; color: var(--text-secondary); }
+.search-suggestions > button:hover, .search-results > button:hover { background: var(--surface-subtle); }
 .search-results b { font-size: 14px; font-weight: 600; }
 .search-results small { font-size: 12px; color: var(--text-muted); }
 .empty-state h3 { font-size: 20px; font-weight: 600; color: var(--text-primary); }
