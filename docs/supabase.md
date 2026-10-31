@@ -24,6 +24,8 @@ SUPABASE_SECRET_KEY=YOUR_SERVER_SECRET_KEY
 WORKSPACE_STORAGE_PROVIDER=d1
 ```
 
+An ignored `.env` in the project root can contain these same server variables instead. If `.dev.vars` exists, it takes precedence over `.env`; keep the configuration in one of those files and restart the local server after changes. The connection checker follows that same file precedence and also accepts `NEXT_PUBLIC_SUPABASE_URL` for the nonsecret project URL. It requires `SUPABASE_SECRET_KEY` for privileged server access; `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` alone does not enable workspace storage. Never prefix the secret key with `NEXT_PUBLIC_`.
+
 The placeholder is not a credential. Keep `d1` selected until the schema and live read/write probe have passed. A legacy service-role JWT is supported under the same server-only key variable for compatibility; a publishable or anonymous key cannot serve as this privileged connection.
 
 For the hosted app, configure the same names through **Sites runtime environment variables**, marking the secret key as secret. Local files do not configure the deployed Worker. Keep the existing D1 and R2 bindings available during the migration. After the schema, credential, and connection probe pass, select `WORKSPACE_STORAGE_PROVIDER=supabase` and publish the corresponding saved app version. A configured Supabase failure must report an error; it must not silently route writes back to D1.

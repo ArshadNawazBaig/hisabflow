@@ -1,19 +1,20 @@
 import { readFile } from 'node:fs/promises';
+import { parseEnv } from 'node:util';
 import { createSupabaseWorkspaceStore, HISABFLOW_SUPABASE_URL } from '../lib/server/supabase-workspace.ts';
 
 // Read configuration locally without displaying or evaluating credential values.
-const values={};
-try {
- const text=await readFile(new URL('../.dev.vars',import.meta.url),'utf8');
- for(const line of text.split(/\r?\n/)){
-  const match=line.match(/^\s*(SUPABASE_URL|SUPABASE_SECRET_KEY)\s*=\s*(.*?)\s*$/);
-  if(match){let value=match[2];if(value.startsWith('"')&&value.endsWith('"'))value=JSON.parse(value);else if(value.startsWith("'")&&value.endsWith("'"))value=value.slice(1,-1);values[match[1]]=value;}
- }
-}catch(error){if(error.code!=='ENOENT'){process.stderr.write('Could not read the local Supabase configuration.\n');process.exit(1);}}
-const url=process.env.SUPABASE_URL||values.SUPABASE_URL||HISABFLOW_SUPABASE_URL;
+let values={};
+// Match Wrangler: an existing .dev.vars takes precedence over .env.
+for(const filename of ['.dev.vars','.env']){
+ try {
+  values=parseEnv(await readFile(new URL(`../${filename}`,import.meta.url),'utf8'));
+  break;
+ }catch(error){if(error.code!=='ENOENT'){process.stderr.write('Could not read the local Supabase configuration.\n');process.exit(1);}}
+}
+const url=process.env.SUPABASE_URL||values.SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL||values.NEXT_PUBLIC_SUPABASE_URL||HISABFLOW_SUPABASE_URL;
 const secretKey=process.env.SUPABASE_SECRET_KEY||values.SUPABASE_SECRET_KEY||'';
 try{
- if(!secretKey)throw new Error('Add SUPABASE_SECRET_KEY privately to .dev.vars or the server environment before checking the live connection.');
+ if(!secretKey)throw new Error('Add SUPABASE_SECRET_KEY privately to .env, .dev.vars, or the server environment. A NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY cannot authorize HisabFlow server storage.');
  const store=createSupabaseWorkspaceStore({url,secretKey});
  await store.get('hisabflow-readiness-probe');
  const headers={apikey:secretKey,'Content-Type':'application/json'};
