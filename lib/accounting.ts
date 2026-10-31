@@ -279,10 +279,33 @@ export function affectsCash(payment: Payment): boolean {
     payment.treatment !== 'Supplier-agreed deduction';
 }
 
+function companyLinkDeletionReason(workspace: Workspace, companyId: string): string | null {
+  if (workspace.shipments.some(shipment => shipment.companyId === companyId)) return 'This company has delivery records. Keep it for account history.';
+  if (workspace.payments.some(payment => payment.companyId === companyId || payment.onBehalfOf === companyId)) return 'This company has payment records. Keep it for account history.';
+  if (workspace.imports.some(batch => batch.mapping.counterpartyId === companyId || batch.createdCompanyId === companyId || batch.rows.some(row => row.companyId === companyId))) return 'This company has linked statements. Keep it for source history.';
+  return null;
+}
+
+/** Only unused companies with a known zero balance can be deleted. */
+export function companyDeletionReason(workspace: Workspace, companyId: string): string | null {
+  const company = workspace.companies.find(candidate => candidate.id === companyId);
+  if (!company) return 'This company no longer exists.';
+  if (!validMoney(company.balance, true)) return 'Resolve the company balance before deleting it.';
+  if (compare(company.balance, '0') !== 0) return 'Settle the company balance before deleting it.';
+  return companyLinkDeletionReason(workspace, companyId);
+}
+
 /** Validate manual financial records as well as changes derived from source imports. */
 export function validateWorkspaceRecords(incoming: Workspace, previous: Workspace | null = null): string[] {
   const errors: string[] = [];
   if (previous && previous.currency !== incoming.currency && (previous.shipments.length || previous.payments.length || previous.imports.some(b => b.status === 'Posted') || Number(previous.openingCash) !== 0 || previous.companies.some(c => Number(c.balance) !== 0))) errors.push('Currency cannot change over existing financial records without a reviewed conversion.');
+  for (const company of previous?.companies ?? []) {
+    if (incoming.companies.some(candidate => candidate.id === company.id)) continue;
+    // Inspect the stored snapshot as well: clearing links in this request cannot
+    // turn an existing account with financial history into an unused company.
+    const reason = companyDeletionReason(previous!, company.id) || companyLinkDeletionReason(incoming, company.id);
+    if (reason) errors.push(`${company.name}: ${reason}`);
+  }
   errors.push(...reviewCostAllocations(incoming).errors);
   const companies = new Map(incoming.companies.map(c => [c.id, c]));
   for (const shipment of incoming.shipments) {

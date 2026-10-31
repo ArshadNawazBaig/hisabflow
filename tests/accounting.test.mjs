@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { add, subtract, multiply, reconcile, validateImport, postImport, confirmedMargin, validatePostedChanges, validateWorkspaceRecords, affectsCash } from '../lib/accounting.ts';
+import { add, subtract, multiply, reconcile, validateImport, postImport, confirmedMargin, validatePostedChanges, validateWorkspaceRecords, affectsCash, companyDeletionReason } from '../lib/accounting.ts';
 
 const workspace = () => ({ business:'Private test business',currency:'PKR',openingCash:'0.00',companies:[{id:'supplier',name:'Fictional supplier',role:'Supplier',aliases:[],balance:'0.00',status:'Active'},{id:'customer',name:'Fictional customer',role:'Customer',aliases:[],balance:'0.00',status:'Active'}],shipments:[],payments:[],imports:[],audit:[] });
 const sourceRow = (changes={}) => ({id:'r1',page:1,sequence:1,rawDate:'16/10/2026',proposedDate:'2026-10-16',effectiveDate:'2026-10-16',description:'Goods delivered',party:'Warehouse A',vehicle:'DEMO-001',weight:'2.125',rate:'40000.00',goods:'85000.00',paid:'0.00',balance:'85000.00',reference:'',kind:'goods',status:'Approved',issues:[],raw:'16/10/2026 Goods delivered Warehouse A DEMO-001 2.125 40000 85000',reviewer:'Reviewer',reviewedAt:'2026-10-31T00:00:00Z',...changes});
@@ -299,4 +299,73 @@ test('currency cannot silently relabel existing financial amounts',()=>{
   assert.ok(validateWorkspaceRecords(incoming,previous).some(e=>e.includes('Currency cannot change')));
   const empty=workspace(),newDefault=structuredClone(empty);newDefault.currency='USD';
   assert.deepEqual(validateWorkspaceRecords(newDefault,empty),[]);
+});
+
+test('an unused zero-balance company can be removed while retaining audit history',()=>{
+  const before=workspace();before.audit=[{id:'audit-create',at:'2026-10-31T00:00:00Z',action:'Company added',detail:'Fictional supplier',actor:'Synthetic reviewer'}];
+  const original=structuredClone(before);
+  assert.equal(companyDeletionReason(before,'supplier'),null);
+  const incoming=structuredClone(before);incoming.companies=incoming.companies.filter(company=>company.id!=='supplier');
+  assert.deepEqual(validateWorkspaceRecords(incoming,before),[]);
+  assert.deepEqual(validatePostedChanges(incoming,before,'Synthetic reviewer'),[]);
+  assert.deepEqual(incoming.audit,original.audit);assert.deepEqual(before,original);
+});
+
+test('company deletion requires a known zero balance and an existing company',()=>{
+  for(const balance of ['100.00','-100.00']) {
+    const data=workspace();data.companies[0].balance=balance;
+    assert.match(companyDeletionReason(data,'supplier'),/Settle the company balance/);
+    const removed=structuredClone(data);removed.companies=removed.companies.filter(company=>company.id!=='supplier');
+    assert.ok(validateWorkspaceRecords(removed,data).some(message=>message.includes('Settle the company balance')));
+  }
+  const invalid=workspace();invalid.companies[0].balance='unknown';
+  assert.match(companyDeletionReason(invalid,'supplier'),/Resolve the company balance/);
+  assert.match(companyDeletionReason(workspace(),'missing'),/no longer exists/);
+  for(const balance of ['0','0.00','-0.00']) {
+    const data=workspace();data.companies[0].balance=balance;
+    assert.equal(companyDeletionReason(data,'supplier'),null);
+  }
+});
+
+test('deliveries and payment allocations prevent company deletion even at zero balance',()=>{
+  const deliveries=workspace();deliveries.shipments=[shipment()];
+  assert.match(companyDeletionReason(deliveries,'supplier'),/delivery records/);
+  const allocated=workspace();allocated.payments=[payment({companyId:'supplier',direction:'Paid',treatment:'Supplier settlement'})];
+  assert.match(companyDeletionReason(allocated,'supplier'),/payment records/);
+  const represented=workspace();represented.payments=[payment({onBehalfOf:'supplier'})];
+  assert.match(companyDeletionReason(represented,'supplier'),/payment records/);
+});
+
+test('draft and posted statement mappings, row allocations, and creation declarations prevent deletion',()=>{
+  for(const status of ['Draft','Posted']) {
+    for(const link of ['mapping','row','declaration']) {
+      const data=workspace(),source=batch({status});source.mapping.counterpartyId='customer';
+      if(link==='mapping') source.mapping.counterpartyId='supplier';
+      if(link==='row') source.rows[0].companyId='supplier';
+      if(link==='declaration') source.createdCompanyId='supplier';
+      data.imports=[source];
+      assert.match(companyDeletionReason(data,'supplier'),/linked statements/);
+    }
+  }
+});
+
+test('removing a company cannot bypass its stored financial history by deleting the records simultaneously',()=>{
+  const before=workspace();before.shipments=[shipment()];before.payments=[payment({id:'supplier-settlement',companyId:'supplier',direction:'Paid',amount:'28000.00',actor:'Fictional supplier',treatment:'Supplier settlement'})];
+  assert.equal(before.companies[0].balance,'0.00');assert.deepEqual(validateWorkspaceRecords(before),[]);
+  const removed=structuredClone(before);removed.companies=removed.companies.filter(company=>company.id!=='supplier');removed.shipments=[];removed.payments=[];
+  assert.ok(validateWorkspaceRecords(removed,before).some(message=>message.includes('delivery records')));
+});
+
+test('removing a company cannot bypass a stored draft allocation by deleting its statement',()=>{
+  const before=workspace(),source=batch();source.mapping.counterpartyId='customer';source.rows[0].companyId='supplier';before.imports=[source];
+  const removed=structuredClone(before);removed.companies=removed.companies.filter(company=>company.id!=='supplier');removed.imports=[];
+  assert.ok(validateWorkspaceRecords(removed,before).some(message=>message.includes('linked statements')));
+});
+
+test('new incoming statement allocations and on-behalf payment references also block company removal',()=>{
+  const before=workspace(),removed=structuredClone(before);removed.companies=removed.companies.filter(company=>company.id!=='supplier');
+  const source=batch();source.mapping.counterpartyId='customer';source.rows[0].companyId='supplier';removed.imports=[source];
+  assert.ok(validateWorkspaceRecords(removed,before).some(message=>message.includes('linked statements')));
+  removed.imports=[];removed.payments=[payment({onBehalfOf:'supplier'})];removed.companies.find(company=>company.id==='customer').balance='-10000.00';
+  assert.ok(validateWorkspaceRecords(removed,before).some(message=>message.includes('payment records')));
 });

@@ -36,6 +36,8 @@ The selected project is `coeazyvaghocoxuzngcc`. Follow [the Supabase setup guide
 
 `node tests/controls-browser.mjs` checks the shared custom dropdowns, date pickers, and account suggestions in a separate loopback component harness. It covers form values, validation, keyboard selection, reset, mobile/dark layouts, and the delivery, payment, report, and import screens without accessing real workspaces or changing the app's login guard.
 
+`node tests/company-actions-browser.mjs` checks company View, Edit, and Delete actions with isolated fixtures, including keyboard navigation, protected account history, delete confirmation, save acknowledgment, retry, and mobile/dark layouts. It never changes a real workspace.
+
 `node tests/pdf-browser.mjs` runs the actual PDF extractor on a sanitized generated ledger in Chromium, including a context without stream async iteration to catch Safari compatibility regressions. It uses a temporary loopback server and does not access real workspaces.
 
 Both original ledgers were verified privately against their goods/payment counts, printed closing totals, source-order balance transitions and quantity multiplications. Only sanitized extraction, automation and accounting fixtures are tracked; the actual documents and their rows are not bundled or seeded into the app. No sample workspace is served by the app.

@@ -48,6 +48,14 @@
 .rv-badge.neutral{background:var(--soft);color:var(--text-secondary)}
 .rv-green,.rv-table td b.rv-green{color:var(--text-green)}
 .rv-table-footer{padding:16px 25px;display:flex;justify-content:space-between;gap:16px;font-size:12px;color:var(--text-muted);line-height:1.5;flex-wrap:wrap}
+.rv-table .rv-company-actions-heading,.rv-table .rv-company-actions-cell{text-align:right;width:1%;padding-left:12px}
+.rv-delete-description{margin:0;font-size:16px;line-height:1.6;color:var(--text-secondary);overflow-wrap:anywhere}
+.rv-delete-restriction{display:flex;align-items:flex-start;gap:10px;padding:14px;border:1px solid var(--border-subtle);border-radius:10px;background:var(--surface-subtle);color:var(--text-secondary)}
+.rv-delete-restriction svg{flex-shrink:0;margin-top:3px}
+.rv-delete-restriction p{margin:0;font-size:16px;line-height:1.6;overflow-wrap:anywhere}
+.rv-delete-button{background:var(--status-red-bg);color:var(--status-red-text);border:1px solid var(--status-red-text)}
+.rv-delete-button:hover{background:var(--status-red-bg);color:var(--status-red-text);filter:brightness(.96)}
+.rv-delete-button:focus-visible{outline:2px solid var(--status-red-text);outline-offset:3px}
 .rv-empty{padding:55px 24px;display:flex;align-items:center;flex-direction:column;text-align:center;color:#91a17f;gap:10px}
 .rv-empty h3{font-size:18px;color:var(--text-primary);margin:8px 0 0;font-weight:600}
 .rv-empty p{font-size:14px;color:var(--text-secondary);max-width:370px;margin:0;line-height:1.6}
