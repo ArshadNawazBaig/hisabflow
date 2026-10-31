@@ -10,13 +10,13 @@
 @media(max-width:430px){.metric-value{font-size:24px;letter-spacing:-.9px;gap:3px}.metric-value>small{font-size:9px}.metric-card{padding:15px 12px}.metric-label{font-size:10px}.metric-footer{font-size:7px}.metric-label>span{height:23px;width:23px}.balance-value{font-size:35px}}
 @media(min-width:1100px) and (max-width:1439px){.summary-grid{grid-template-columns:1fr 1.03fr 1.12fr}.cashflow-panel{grid-column:auto}.cashflow-chart{height:172px}.chart-bars{gap:13px}.bar-stack{max-width:29px}.balance-panel{padding:19px}.balance-value{font-size:30px}.metric-card{padding:14px 11px}.metric-value{font-size:23px;gap:3px;margin-top:21px}.metric-value>small{font-size:9px}.metric-label{font-size:10px}.metric-footer{font-size:6.7px}.accounts-section{padding:12px 9px 9px}.account-mini-card{padding:10px 8px!important}.account-mini-card>b{font-size:12px}.account-mini-card>div{font-size:7px}.balance-actions{margin:19px 0 20px}.overview-bottom-grid{grid-template-columns:1fr 2.2fr}}
 
-/* Anchor the desktop rail to the viewport, including the frame's 8px inset. */
+/* Anchor the desktop rail directly to the viewport. */
 @media (min-width: 701px) {
   .side-rail {
     position: fixed;
-    top: 124px;
-    left: 25px;
-    bottom: 31px;
+    top: 116px;
+    left: 17px;
+    bottom: 23px;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: none;
@@ -27,29 +27,36 @@
 }
 
 @media (min-width: 701px) and (max-width: 950px) {
-  .side-rail { top: 119px; left: 21px; }
+  .side-rail { top: 111px; left: 13px; }
 }
 
 @media (min-width: 1440px) {
-  .side-rail { top: 148px; left: 32px; }
+  .side-rail { top: 140px; left: 24px; }
 }
 
 /* Reserve the header's space while its navigation stays above scrolling content. */
+html, body, html[data-theme=dark] body {
+  background: var(--canvas);
+}
+
 .app-frame {
   --navbar-height: 93px;
+  margin: 0;
+  border-radius: 0;
+  min-height: 100dvh;
   padding-top: var(--navbar-height);
 }
 
 .topbar {
   position: fixed;
   top: 0;
-  left: 8px;
-  right: 8px;
+  left: 0;
+  right: 0;
   z-index: 40;
-  height: calc(var(--navbar-height) + 8px);
-  padding-top: 8px;
+  height: var(--navbar-height);
+  padding-top: 0;
   background: transparent;
-  border-radius: 25px 25px 0 0;
+  border-radius: 0;
   border-bottom: 0;
   box-shadow: none;
 }
