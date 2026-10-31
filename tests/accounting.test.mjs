@@ -37,6 +37,13 @@ test('anomalous raw dates stay raw and need an approved effective date',()=>{
   assert.ok(validateImport(b,workspace()).some(e=>e.includes('effective date')));
   assert.equal(b.rows[0].rawDate,'22/07/026'); assert.equal(b.rows[0].effectiveDate,'');
 });
+test('unreadable source pages block posting even when extracted rows are approved',()=>{
+  const b=batch({sourceMetadata:{title:'Supplier statement',issuerGuess:'Fictional issuer',columns:[],unreadablePages:[2]}});
+  assert.ok(validateImport(b,workspace()).some(e=>e.includes('source pages could not be read')));
+  assert.throws(()=>postImport(b,workspace(),'Reviewer'),/source pages could not be read/);
+  b.sourceMetadata.unreadablePages=[];
+  assert.deepEqual(validateImport(b,workspace()),[]);
+});
 test('rejected delivery retains its positive source amount without invented refunds',()=>{
   const b=batch({rows:[sourceRow({reference:'Rejected'})]});
   const posted=postImport(b,workspace(),'Reviewer');
@@ -58,6 +65,16 @@ test('reimporting a posted batch or identical source hash cannot duplicate recor
   const copy={...b,id:'BATCH-2'};
   assert.ok(validateImport(copy,posted).some(e=>e.includes('already been imported')));
   assert.equal(posted.shipments.length,1);
+});
+test('source row IDs and source page/row locations cannot be reused within an import',()=>{
+  const duplicateId=batch({rows:[sourceRow(),sourceRow({sequence:2,description:'Separate source line',balance:'170000.00'})]});
+  duplicateId.mapping.expectedClosing='170000.00';
+  assert.ok(validateImport(duplicateId,workspace()).some(e=>e.includes('Source row IDs must be unique')));
+  assert.throws(()=>postImport(duplicateId,workspace(),'Reviewer'),/Source row IDs must be unique/);
+  const duplicateLocation=structuredClone(duplicateId);duplicateLocation.rows[1].id='r2';duplicateLocation.rows[1].sequence=1;
+  assert.ok(validateImport(duplicateLocation,workspace()).some(e=>e.includes('Source page and row locations must be unique')));
+  duplicateLocation.rows[1].page=2;
+  assert.deepEqual(validateImport(duplicateLocation,workspace()),[]);
 });
 test('overlap detection uses multiple row attributes, not amount or TID alone',()=>{
   const b=batch(), posted=postImport(b,workspace(),'Reviewer');
@@ -98,6 +115,78 @@ test('server-side posting validation rejects forged posted records and balances'
   const forged=structuredClone(posted); forged.shipments[0].amount='1.00'; forged.companies[0].balance='999999.00';
   const errors=validatePostedChanges(forged,before,'Reviewer');
   assert.ok(errors.some(e=>e.includes('shipment differs'))); assert.ok(errors.some(e=>e.includes('balance')));
+});
+test('newly posted imports must have exactly their replayed shipment and payment records',()=>{
+  const before=workspace(),posted=postImport(batch(),before,'Reviewer');
+  const extraPayment=structuredClone(posted);extraPayment.payments.push({id:'unreviewed-payment',direction:'Paid',date:'2026-10-16',companyId:'supplier',actor:'Unreviewed actor',amount:'1.00',account:'Unassigned',bankLabel:'',reference:'',treatment:'Other adjustment',status:'Needs review',balanceApplied:false,sourceRef:'BATCH-1'});
+  assert.deepEqual(validateWorkspaceRecords(extraPayment,before),[]);
+  assert.ok(validatePostedChanges(extraPayment,before,'Reviewer').some(e=>e.includes('record set')));
+  const extraShipment=structuredClone(posted);extraShipment.shipments.push({...extraShipment.shipments[0],id:'unreviewed-shipment'});
+  assert.ok(validatePostedChanges(extraShipment,before,'Reviewer').some(e=>e.includes('record set')));
+  const missing=structuredClone(posted);missing.shipments=[];
+  assert.ok(validatePostedChanges(missing,before,'Reviewer').some(e=>e.includes('record set')));
+  const duplicate=structuredClone(posted);duplicate.shipments.push(structuredClone(duplicate.shipments[0]));
+  assert.ok(validatePostedChanges(duplicate,before,'Reviewer').some(e=>e.includes('record set')));
+});
+test('an opening-balance import cannot carry extra transaction records',()=>{
+  const before=workspace(),source=batch();source.mapping.mode='Opening balance';source.mapping.cutoff='2026-10-31';
+  const posted=postImport(source,before,'Reviewer');
+  assert.deepEqual(validatePostedChanges(posted,before,'Reviewer'),[]);
+  posted.payments.push({id:'unreviewed-payment',direction:'Paid',date:'2026-10-16',companyId:'supplier',actor:'Unreviewed actor',amount:'1.00',account:'Unassigned',bankLabel:'',reference:'',treatment:'Other adjustment',status:'Needs review',balanceApplied:false,sourceRef:source.id});
+  assert.ok(validatePostedChanges(posted,before,'Reviewer').some(e=>e.includes('record set')));
+});
+function newCompanyImport() {
+  const before=workspace();
+  const company={id:'new-supplier',name:'Reviewed new supplier',role:'Supplier',aliases:[],balance:'0.00',status:'Active'};
+  const source=batch({createdCompanyId:company.id});source.mapping.counterpartyId=company.id;
+  const posted=postImport(source,{...before,companies:[...before.companies,company]},'Reviewer');
+  return {before,company,source,posted};
+}
+test('a declared new company and its first reviewed import can be saved atomically',()=>{
+  const {before,company,source,posted}=newCompanyImport();
+  assert.deepEqual(validatePostedChanges(posted,before,'Reviewer'),[]);
+  assert.deepEqual(validateWorkspaceRecords(posted,before),[]);
+  assert.equal(posted.companies.find(c=>c.id===company.id).balance,'-85000.00');
+  assert.equal(posted.shipments[0].companyId,company.id);
+  assert.equal(posted.shipments[0].deliveryParty,source.rows[0].party);
+  assert.equal(posted.companies.some(c=>c.name===source.rows[0].party),false);
+  assert.equal(before.companies.some(c=>c.id===company.id),false);
+});
+test('new-company import balances must equal a replay from zero',()=>{
+  const {before,company,posted}=newCompanyImport();
+  posted.companies.find(c=>c.id===company.id).balance='-1.00';
+  assert.ok(validatePostedChanges(posted,before,'Reviewer').some(e=>e.includes('balance')));
+});
+test('an import cannot claim an existing company as newly created',()=>{
+  const before=workspace(),posted=postImport(batch({createdCompanyId:'supplier'}),before,'Reviewer');
+  assert.ok(validatePostedChanges(posted,before,'Reviewer').some(e=>e.includes('existing accounting company')));
+});
+test('new-company declarations must identify the incoming accounting counterparty',()=>{
+  const {before,company,posted}=newCompanyImport();
+  const mismatched=structuredClone(posted);mismatched.imports[0].createdCompanyId='customer';
+  assert.ok(validatePostedChanges(mismatched,before,'Reviewer').some(e=>e.includes('must be its accounting counterparty')));
+  const missing=structuredClone(posted);missing.companies=missing.companies.filter(c=>c.id!==company.id);
+  assert.ok(validatePostedChanges(missing,before,'Reviewer').some(e=>e.includes('must exist in the submitted workspace')));
+  const undeclared=structuredClone(posted);delete undeclared.imports[0].createdCompanyId;
+  assert.ok(validatePostedChanges(undeclared,before,'Reviewer').some(e=>e.includes('existing accounting counterparty')));
+});
+test('a new company must have a valid role that agrees with the imported goods',()=>{
+  const {before,company,posted}=newCompanyImport();
+  const wrongRole=structuredClone(posted);wrongRole.companies.find(c=>c.id===company.id).role='Customer';
+  assert.ok(validatePostedChanges(wrongRole,before,'Reviewer').some(e=>e.includes('supplier')));
+  const invalidRole=structuredClone(posted);invalidRole.companies.find(c=>c.id===company.id).role='Vendor';
+  assert.ok(validatePostedChanges(invalidRole,before,'Reviewer').some(e=>e.includes('valid accounting role')));
+});
+test('multiple batches replay sequentially after a company is created exactly once',()=>{
+  const {before,company,posted}=newCompanyImport();
+  const next=batch({id:'BATCH-2',hash:'second-source-hash',rows:[sourceRow({id:'r2',description:'A separate reviewed delivery'})]});
+  next.mapping.counterpartyId=company.id;
+  const combined=postImport(next,posted,'Reviewer');
+  assert.deepEqual(validatePostedChanges(combined,before,'Reviewer'),[]);
+  assert.deepEqual(validateWorkspaceRecords(combined,before),[]);
+  assert.equal(combined.companies.find(c=>c.id===company.id).balance,'-170000.00');
+  combined.imports.find(b=>b.id===next.id).createdCompanyId=company.id;
+  assert.ok(validatePostedChanges(combined,before,'Reviewer').some(e=>e.includes('Only one import batch')));
 });
 test('posting validation has no partial effects when one row fails',()=>{
   const before=workspace(), snapshot=structuredClone(before);

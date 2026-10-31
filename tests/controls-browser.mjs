@@ -103,6 +103,10 @@ try{
   await page.getByRole('button',{name:'Approve effective date',exact:true}).click();await page.getByRole('button',{name:'Today',exact:true}).click();
   assert.equal(await page.locator('select:visible,input[type="date"]:visible,input[list]:visible').count(),0);
   await page.screenshot({path:'outputs/custom-controls-import.png',animations:'disabled'});
+  await navigate('Companies');
+  await page.locator('.rv-table tbody tr').filter({hasText:'QA Customer'}).click();
+  await modal.getByRole('button',{name:'Review statement',exact:true}).click();
+  await page.locator('.import-document-heading h2').filter({hasText:'QA control statement.pdf'}).waitFor();
   assert.deepEqual(errors,[]);
   console.log('PASS custom controls: validation, keyboard selection, ISO dates, account suggestions/free text, reset, month selection, clear, mobile/dark popup bounds, deliveries, payments, reports, and import review.');
   await context.close();

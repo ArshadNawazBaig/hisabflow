@@ -89,12 +89,16 @@ export function validateImport(batch: ImportBatch, workspace: Workspace): string
   if (company && m.direction === 'Receipt' && company.role === 'Customer') errors.push('Goods receipts require a supplier or a company with both roles.');
   if (company && m.direction === 'Dispatch' && company.role === 'Supplier') errors.push('Goods dispatches require a customer or a company with both roles.');
   if (!batch.hash || !batch.fileKey) errors.push('Retain the uploaded source file and its hash before posting.');
+  if (batch.sourceMetadata?.unreadablePages?.length) errors.push('Some source pages could not be read. Provide a reviewed transcription before posting this statement.');
   if (workspace.imports.some(b => b.id !== batch.id && b.status === 'Posted' && b.hash === batch.hash)) errors.push('This source file has already been imported.');
   if (batch.status === 'Posted' || workspace.imports.some(b => b.id === batch.id && b.status === 'Posted')) errors.push('This import batch is already posted.');
   if (!validMoney(m.openingBalance, true)) errors.push('Enter a valid source opening balance.');
   if (!validMoney(m.expectedClosing, true)) errors.push('Enter the printed closing source balance.');
   const active = batch.rows.filter(r => r.kind !== 'excluded' && r.status !== 'Excluded');
   if (!active.length) errors.push('No transaction rows are ready to import.');
+  if (batch.rows.some(row => !row.id.trim())) errors.push('Each source row requires a nonempty ID.');
+  if (new Set(batch.rows.map(row => row.id)).size !== batch.rows.length) errors.push('Source row IDs must be unique within an import.');
+  if (new Set(batch.rows.map(row => `${row.page}:${row.sequence}`)).size !== batch.rows.length) errors.push('Source page and row locations must be unique within an import.');
   const prior = workspace.imports.filter(b => b.status === 'Posted' && b.mapping.counterpartyId === m.counterpartyId);
   const priorRows = new Set(prior.flatMap(b => b.rows.filter(r => r.kind !== 'excluded').map(fingerprint)));
   const openingCutoffs = prior.filter(b => b.mapping.mode === 'Opening balance' && approvedDate(b.mapping.cutoff)).map(b => b.mapping.cutoff);
@@ -370,18 +374,36 @@ export function validatePostedChanges(incoming: Workspace, previous: Workspace |
   if (!postings.length) return errors;
   if (!previous) return [...errors, 'Save the private business workspace before posting a source import.'];
   let expected = structuredClone(previous);
+  const declaredCompanies = new Set<string>();
   for (const batch of postings) {
+    if (batch.createdCompanyId !== undefined) {
+      const companyId = batch.createdCompanyId;
+      const company = incoming.companies.find(candidate => candidate.id === companyId);
+      const declarationErrors: string[] = [];
+      if (!companyId || companyId !== batch.mapping.counterpartyId) declarationErrors.push('A company created by an import must be its accounting counterparty.');
+      if (declaredCompanies.has(companyId)) declarationErrors.push('Only one import batch may declare a new accounting company.');
+      declaredCompanies.add(companyId);
+      if (previous.companies.some(candidate => candidate.id === companyId)) declarationErrors.push('An import cannot declare an existing accounting company as newly created.');
+      if (!company) declarationErrors.push('The accounting company declared by the import must exist in the submitted workspace.');
+      else if (!['Customer', 'Supplier', 'Both'].includes(company.role)) declarationErrors.push('A company created by an import must have a valid accounting role.');
+      if (declarationErrors.length) { errors.push(...declarationErrors); continue; }
+      // A declared company begins with no balance. Only the source records replayed
+      // below may establish its closing balance in this same atomic snapshot.
+      expected.companies.push({ ...structuredClone(company!), balance: '0.00' });
+    }
     const draft = { ...batch, status: 'Draft' as const };
     const failures = validateImport(draft, expected);
     if (failures.length) { errors.push(...failures); continue; }
     expected = postImport(draft, expected, reviewer);
     const expectedBatch = expected.imports.find(b => b.id === batch.id)!;
     if (!sameValue(batch.postedRecordIds, expectedBatch.postedRecordIds)) errors.push('Imported record links do not match the reviewed source.');
-    for (const shipment of expected.shipments.filter(s => s.sourceRef === batch.id)) {
-      if (!sameValue(incoming.shipments.find(s => s.id === shipment.id), shipment)) errors.push('Imported shipment differs from the reviewed source.');
-    }
-    for (const payment of expected.payments.filter(p => p.sourceRef === batch.id)) {
-      if (!sameValue(incoming.payments.find(p => p.id === payment.id), payment)) errors.push('Imported payment differs from the reviewed source.');
+    for (const collection of ['shipments', 'payments'] as const) {
+      const records = expected[collection].filter(record => record.sourceRef === batch.id);
+      const submitted = incoming[collection].filter(record => record.sourceRef === batch.id);
+      if (!sameValue(records.map(record => record.id).sort(), submitted.map(record => record.id).sort())) errors.push('Imported record set does not match the reviewed source.');
+      for (const record of records) {
+        if (!sameValue(submitted.find(candidate => candidate.id === record.id), record)) errors.push(`Imported ${collection === 'shipments' ? 'shipment' : 'payment'} differs from the reviewed source.`);
+      }
     }
   }
   for (const company of expected.companies) {

@@ -25,7 +25,8 @@ The selected project is `coeazyvaghocoxuzngcc`. Follow [the Supabase setup guide
 - Receipt and dispatch records with optional vehicles and quantities, three-decimal inputs, decimal-safe amount calculation, delivery status separate from accounting settlement, attachments, truck and delivery-party filters.
 - Reviewed purchase/sale relationships and cost allocations from multiple purchase sources, including partial cost coverage; unmatched costs remain unresolved. Margin covers confirmed goods trading costs; unallocated freight, landed costs, and overhead are excluded, so this is not net profit.
 - Actual remitter/beneficiary, accounting counterparty, on-behalf-of company, raw bank labels, string transaction references, own cash account, reviewed classifications, and supplier deductions without duplicate cash outflows.
-- PDF text-layer extraction and delimited text/CSV transcription; upload, map, review, reconcile in source order, preview, confirm, and atomic posting. An image-only PDF can retain its original evidence while a human supplies a transcription. OCR is not included.
+- Multi-PDF upload reads the supplied ledger layouts, prefills company names, dates, vehicles, quantities, payments and references, and shows one combined preview. Confirm the customer/supplier relationship, source perspective and units once per statement. Confirmation creates or matches companies and posts fully reconciled statements atomically; ambiguous statements retain their prepared rows as linked drafts. Company records link directly to their statements and exceptions. PDF originals remain private, exact-file reuploads reuse the existing batch, and failed retention or save requests can be retried without duplicating records.
+- Text-layer PDFs and reviewed delimited text/CSV transcription are supported. Pages without readable text are reported and block financial posting; OCR is not included. Delivery parties and payment actors are kept separate from accounting companies, and unusual payments or uncertain dates remain available for review.
 - Retained file/hash/page/row/raw values/approved values/running balances/reviewer, private originals, exact-file and row-overlap duplicate protection, historical transactions versus an opening-balance cutoff, and immutable posted batches.
 - CSV reports for cash flow, balances, deliveries, reviewed margin, and audit history. No invented invoices, due dates, allocations, or automatic overdue status.
 
@@ -35,7 +36,9 @@ The selected project is `coeazyvaghocoxuzngcc`. Follow [the Supabase setup guide
 
 `node tests/controls-browser.mjs` checks the shared custom dropdowns, date pickers, and account suggestions in a separate loopback component harness. It covers form values, validation, keyboard selection, reset, mobile/dark layouts, and the delivery, payment, report, and import screens without accessing real workspaces or changing the app's login guard.
 
-The user supplied PDF descriptions and aggregate totals, not the original PDFs. Aggregate arithmetic is tested and labeled as brief evidence. Synthetic fixtures test source-order transitions and anomalies; reproducing every transition from the actual two PDFs requires those original files. No sample workspace is served by the app.
+`node tests/pdf-browser.mjs` runs the actual PDF extractor on a sanitized generated ledger in Chromium, including a context without stream async iteration to catch Safari compatibility regressions. It uses a temporary loopback server and does not access real workspaces.
+
+Both original ledgers were verified privately against their goods/payment counts, printed closing totals, source-order balance transitions and quantity multiplications. Only sanitized extraction, automation and accounting fixtures are tracked; the actual documents and their rows are not bundled or seeded into the app. No sample workspace is served by the app.
 
 ## Scope
 

@@ -33,6 +33,8 @@ export default function HisabApp() {
   const [authFeedback,setAuthFeedback] = useState<AuthFeedback|null>(null);
   const [loadError,setLoadError] = useState('');
   const [saveStatus,setSaveStatus] = useState<'saved'|'saving'|'error'>('saved');
+  const [saveConflict,setSaveConflict] = useState(false);
+  const [requestedImportId,setRequestedImportId] = useState<string|null>(null);
   const [toast,setToast] = useState('');
   const [menu,setMenu] = useState<'new'|'account'|'notifications'|null>(null);
   const [dialog,setDialog] = useState<'search'|'settings'|'help'|null>(null);
@@ -70,6 +72,7 @@ export default function HisabApp() {
   },[]);
   useEffect(()=>{if(!menu)return;const close=(e:PointerEvent)=>{if(!(e.target as Element).closest('.popover-anchor'))setMenu(null);};document.addEventListener('pointerdown',close);return()=>document.removeEventListener('pointerdown',close);},[menu]);
   useEffect(()=>{document.documentElement.dataset.theme=dark?'dark':'light';localStorage.setItem('hisab-theme',dark?'dark':'light');},[dark]);
+  useEffect(()=>{const review=(event:Event)=>{const id=(event as CustomEvent<{id?:string}>).detail?.id;if(!id)return;setRequestedImportId(id);setView('Imports');location.hash='Imports';setMenu(null);setDialog(null);};window.addEventListener('hisab:review-import',review);return()=>window.removeEventListener('hisab:review-import',review);},[]);
   useEffect(()=>{if(dialog==='settings')setSettingsCurrency(data.currency);},[dialog,data.currency]);
   useEffect(()=>{if(!dialog&&!selectedActivity)return;const previous=document.activeElement as HTMLElement|null;const trap=(e:KeyboardEvent)=>{if(e.key!=='Tab'||e.defaultPrevented||hasControlPopup())return;const nodes=Array.from(document.querySelectorAll<HTMLElement>('.modal button:not(:disabled),.modal a,.modal input,.modal select,.modal textarea,.modal [tabindex="0"]')).filter(n=>n.offsetParent!==null);if(!nodes.length)return;const first=nodes[0],last=nodes[nodes.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}};document.addEventListener('keydown',trap);return()=>{document.removeEventListener('keydown',trap);previous?.focus();};},[dialog,selectedActivity]);
   useEffect(()=>{const key=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();setDialog(d=>d==='search'?null:'search');}if(e.key==='Escape'&&!e.defaultPrevented&&!hasControlPopup()){setDialog(null);setMenu(null);setSelectedActivity(null);}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[]);
@@ -82,7 +85,7 @@ export default function HisabApp() {
         const r=await fetch('/api/workspace',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({...item,revision:revision.current})});
         if(r.status===401){pending.current=[];flushing.current=false;location.replace('/login');return;}
         const result=await r.json() as {error?:string;fields?:string[];revision:number;data:Workspace};
-        if(r.status===409){const current=await fetch('/api/workspace');if(current.ok){const fresh=await current.json() as {data:Workspace;revision:number};lastSaved.current=fresh.data;revision.current=fresh.revision;setData(fresh.data);}pending.current=[];throw new Error('Another tab changed your workspace. Your latest saved records have been loaded; please apply your change again.');}
+        if(r.status===409){setSaveConflict(true);const current=await fetch('/api/workspace');if(current.ok){const fresh=await current.json() as {data:Workspace;revision:number};lastSaved.current=fresh.data;revision.current=fresh.revision;setData(fresh.data);}pending.current=[];throw new Error('Another tab changed your workspace. Your latest saved records have been loaded; please apply your change again.');}
         if(!r.ok)throw new Error([result.error,...(result.fields||[]).slice(0,2)].filter(Boolean).join(' · ')||'Could not save this change.');
         revision.current=result.revision;lastSaved.current=result.data;pending.current.shift();if(!pending.current.length)setData(result.data);setSaveStatus('saved');
       }catch(error){if(lastSaved.current)setData(lastSaved.current);setSaveStatus('error');notify(error instanceof Error?error.message:'Save failed. Please retry.');break;}
@@ -90,6 +93,7 @@ export default function HisabApp() {
   },[notify]);
   const update=useCallback((next:Workspace,action:string,detail:string)=>{
     if(!user||!hasWorkspace)return;
+    setSaveConflict(false);
     const actor=user.name;
     const updated={...next,audit:[{id:uid('AUD'),at:new Date().toISOString(),action,detail,actor},...next.audit].slice(0,500)};
     setData(updated);
@@ -108,8 +112,8 @@ export default function HisabApp() {
     try{const r=await fetch('/api/workspace',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:next,revision:revision.current,action:'Workspace created',detail:business})});if(r.status===401){location.replace('/login');return;}const result=await r.json() as {error?:string;revision:number;data:Workspace};if(!r.ok)throw new Error(result.error||'Could not create workspace');revision.current=result.revision;lastSaved.current=result.data;setData(result.data);setHasWorkspace(true);setDialog(null);setSaveStatus('saved');notify('Your workspace is ready. Add your first company.');}catch(e){setSaveStatus('error');setCreateError(e instanceof Error?e.message:'Your workspace could not be created. Please retry.');}
   };
   const needsReview=data.payments.filter(p=>p.status==='Needs review').length+data.shipments.filter(s=>s.status==='Rejected').length+data.imports.filter(i=>i.status==='Draft').length;
-  const props={data,update,notify};
-  const title=view==='Overview'?'Welcome back.':view==='Imports'?'Every ledger. One clear picture.':view;
+  const props={data,update,notify,saveState:saveStatus,saveConflict,retrySave:()=>{void flush();}};
+  const title=view==='Overview'?'Welcome back.':view==='Imports'?'Import statements':view;
   const subtitles:Record<View,string>={Overview:'A little clarity. A lot more control over your business.',Companies:'Good relationships start with a clear balance.',Deliveries:'From the first dispatch to the final destination.',Payments:'Every payment, connected to the right company.',Imports:'Bring your statements in. Keep the evidence connected.',Reports:'The numbers behind your next move.'};
   const searchResults=search.trim()?[
     ...data.companies.filter(c=>`${c.name} ${c.aliases.join(' ')}`.toLowerCase().includes(search.toLowerCase())).map(c=>({id:c.id,title:c.name,sub:`${c.role} · ${c.id}`,view:'Companies' as View})),
@@ -135,7 +139,7 @@ export default function HisabApp() {
     <main className="main-content">
       <div className="page-heading"><div><div className="eyebrow">YOUR BUSINESS, IN BALANCE <span>✳</span></div><h1>{title}</h1><p>{subtitles[view]}</p></div><div className="heading-actions"><span className={`save-status ${saveStatus}`} onClick={()=>saveStatus==='error'&&void flush()}>{saveStatus==='saving'?<Loader2 size={13} className="spin"/>:saveStatus==='error'?<CircleAlert size={13}/>:<CheckCheck size={14}/>} {saveStatus==='saving'?'Saving…':saveStatus==='error'?'Retry save':'All changes saved'}</span><div className="popover-anchor"><button className="button button-dark new-transaction" onClick={()=>setMenu(menu==='new'?null:'new')}><Plus size={17}/>New transaction<ChevronDown size={14}/></button>{menu==='new'&&<div className="popover new-popover"><small className="overline">KEEP BUSINESS MOVING</small><button onClick={()=>newRecord('company')}><Users size={17}/><span>Add company<small>A customer or a supplier</small></span></button><button onClick={()=>newRecord('delivery','Receipt')}><ArrowDownLeft size={17}/><span>Record purchase<small>Goods received from a supplier</small></span></button><button onClick={()=>newRecord('delivery','Dispatch')}><ArrowUpRight size={17}/><span>Record sale<small>Dispatch to a customer</small></span></button><button onClick={()=>newRecord('payment','Received')}><Wallet size={17}/><span>Record payment<small>Money in or money out</small></span></button><button onClick={()=>navigate('Imports')}><Upload size={17}/><span>Import statement<small>Review and reconcile a ledger</small></span></button></div>}</div></div></div>
       {authFeedback&&<div className={`auth-feedback ${authFeedback.kind}`} role={authFeedback.kind==='error'?'alert':'status'}>{authFeedback.kind==='error'?<CircleAlert size={19}/>:<CheckCheck size={19}/>}<div><p>{authFeedback.message}</p>{authFeedback.kind==='error'&&<SignOutForm reset/>}</div><button className="icon-button" aria-label="Dismiss sign-in message" onClick={()=>setAuthFeedback(null)}><X size={17}/></button></div>}
-      {view==='Overview'?<Overview {...props} onNavigate={navigate} onNew={newRecord} onDetail={setSelectedActivity}/>:view==='Companies'?<CompaniesView {...props}/>:view==='Deliveries'?<DeliveriesView {...props}/>:view==='Payments'?<PaymentsView {...props}/>:view==='Imports'?<ImportWorkflow {...props} reviewer={user?.name||'Account owner'}/>:<ReportsView {...props}/>}
+      {view==='Overview'?<Overview {...props} onNavigate={navigate} onNew={newRecord} onDetail={setSelectedActivity}/>:view==='Companies'?<CompaniesView {...props}/>:view==='Deliveries'?<DeliveriesView {...props}/>:view==='Payments'?<PaymentsView {...props}/>:view==='Imports'?<ImportWorkflow {...props} reviewer={user?.name||'Account owner'} requestedImportId={requestedImportId} onRequestHandled={()=>setRequestedImportId(null)}/>:<ReportsView {...props}/>}
       <footer className="app-footer"><span><ShieldCheck size={13}/> A private space for your business</span><span>{data.currency} <i/> Every entry, accounted for.<Leaf size={13}/></span></footer>
     </main>
 

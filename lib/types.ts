@@ -1,3 +1,5 @@
+import type { LedgerMetadata } from './pdf-extract';
+
 export type View = 'Overview' | 'Companies' | 'Deliveries' | 'Payments' | 'Imports' | 'Reports';
 export type Company = { id: string; name: string; role: 'Customer' | 'Supplier' | 'Both'; contact?: string; email?: string; aliases: string[]; balance: string; status: 'Active' | 'Inactive' };
 export type CostAllocation = { shipmentId: string; weight: string; amount: string };
@@ -6,10 +8,10 @@ export type Treatment = 'Supplier settlement' | 'Customer receipt' | 'Payment on
 export type Payment = { id: string; direction: 'Received' | 'Paid'; date: string; companyId: string; actor: string; onBehalfOf?: string; amount: string; account: string; bankLabel: string; reference: string; treatment: Treatment; status: 'Allocated' | 'Needs review'; balanceApplied?: boolean; notes?: string; sourceRef?: string; evidence?: string };
 export type SourceRow = { id: string; page: number; sequence: number; rawDate: string; proposedDate: string; effectiveDate: string; description: string; party: string; vehicle: string; weight: string; rate: string; goods: string; paid: string; balance: string; reference: string; kind: 'goods' | 'payment' | 'excluded'; status: 'Needs review' | 'Approved' | 'Excluded'; issues: string[]; raw: string; treatment?: Treatment; actor?: string; companyId?: string; reviewer?: string; reviewedAt?: string };
 export type ImportMapping = { business: string; issuer: string; counterpartyId: string; perspective: '' | 'Own books' | 'Supplier statement' | 'Customer statement' | 'Third-party statement'; partyMeaning: string; currency: string; unit: string; unitsConfirmed: boolean; history: '' | 'Complete history' | 'Partial history'; mode: 'Transactions' | 'Opening balance'; cutoff: string; direction: '' | 'Receipt' | 'Dispatch'; openingBalance: string; expectedClosing: string; };
-export type ImportBatch = { id: string; name: string; hash: string; createdAt: string; status: 'Draft' | 'Posted'; step: number; mapping: ImportMapping; rows: SourceRow[]; fileKey?: string; postedAt?: string; postedRecordIds?: string[]; };
+export type ImportBatch = { id: string; name: string; hash: string; createdAt: string; status: 'Draft' | 'Posted'; step: number; mapping: ImportMapping; rows: SourceRow[]; fileKey?: string; postedAt?: string; postedRecordIds?: string[]; createdCompanyId?: string; sourceMetadata?: LedgerMetadata; sourcePages?: number; };
 export type AuditEvent = { id: string; at: string; action: string; detail: string; actor: string; sourceRef?: string };
 export type Workspace = { business: string; currency: string; companies: Company[]; shipments: Shipment[]; payments: Payment[]; imports: ImportBatch[]; audit: AuditEvent[]; openingCash: string; };
-export type WorkspaceProps = { data: Workspace; update: (next: Workspace, action: string, detail: string) => void; notify: (message: string) => void; };
+export type WorkspaceProps = { data: Workspace; update: (next: Workspace, action: string, detail: string) => void; notify: (message: string) => void; saveState?: 'saved' | 'saving' | 'error'; saveConflict?: boolean; retrySave?: () => void; };
 export const money = (v: string | number, decimals = 0) => Number(v || 0).toLocaleString('en-PK', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 export const today = () => new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Karachi', year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
 export const uid = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0,8).toUpperCase()}`;
