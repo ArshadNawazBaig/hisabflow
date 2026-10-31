@@ -3,23 +3,22 @@ import { getChatGPTUser } from '../../chatgpt-auth';
 import { validatePostedChanges, validateWorkspaceRecords } from '@/lib/accounting';
 import { saveSchema } from '@/lib/workspace-validation';
 import type { Workspace } from '@/lib/types';
+import { getWorkspaceStore, configuredWorkspaceProvider, workspaceStorageMessage } from '@/lib/server/workspace-store';
 
 export const dynamic = 'force-dynamic';
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers: { 'Cache-Control': 'no-store' } });
 export async function GET() {
   const user = await getChatGPTUser();
   if (!user) return json({ error: 'Sign in to access your private business workspace.' }, 401);
-  if (!env.DB) return json({ error: 'Private storage is not available yet.' }, 503);
   try {
-    const row = await env.DB.prepare('SELECT data, revision FROM workspaces WHERE owner_id = ?').bind(user.userId).first<{ data: string; revision: number }>();
-    return json({ data: row ? JSON.parse(row.data) : null, revision: row?.revision ?? 0, user: { name: user.displayName, email: user.email } });
-  } catch { return json({ error: 'Unable to load your private workspace. Please retry.' }, 503); }
+    const row = await getWorkspaceStore().get(user.userId);
+    return json({ data: row?.data ?? null, revision: row?.revision ?? 0, storage: configuredWorkspaceProvider(), user: { name: user.displayName, email: user.email } });
+  } catch (error) { return json({ error: workspaceStorageMessage(error) }, 503); }
 }
 
 export async function PUT(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return json({ error: 'Sign in before saving business records.' }, 401);
-  if (!env.DB) return json({ error: 'Private storage is not available yet.' }, 503);
   const origin = request.headers.get('origin');
   if (origin && origin !== new URL(request.url).origin) return json({ error: 'Cross-origin writes are not allowed.' }, 403);
   if (Number(request.headers.get('content-length') || 0) > 8 * 1024 * 1024) return json({ error: 'Workspace is too large.' }, 413);
@@ -35,9 +34,10 @@ export async function PUT(request: Request) {
   const companies = new Set(incoming.companies.map(c => c.id));
   if (incoming.shipments.some(s => !companies.has(s.companyId)) || incoming.payments.some(p => !!p.companyId && !companies.has(p.companyId))) return json({error:'Every selected company must exist in this workspace.'},400);
   try {
-    const stored = await env.DB.prepare('SELECT data, revision FROM workspaces WHERE owner_id = ?').bind(user.userId).first<{data:string;revision:number}>();
+    const store = getWorkspaceStore();
+    const stored = await store.get(user.userId);
     if ((stored?.revision ?? 0) !== revision) return json({ error: 'Your workspace changed in another tab. Reload before saving.', revision: stored?.revision ?? 0 }, 409);
-    const previous: Workspace | null = stored ? JSON.parse(stored.data) : null;
+    const previous: Workspace | null = stored?.data ?? null;
     // Recompute postings before a single atomic snapshot write. No partial financial effects are persisted.
     const failures = [...validateWorkspaceRecords(incoming, previous), ...validatePostedChanges(incoming, previous, user.displayName)];
     if (failures.length) return json({ error: 'The records do not match their reviewed accounting effects.', fields: failures }, 400);
@@ -51,11 +51,8 @@ export async function PUT(request: Request) {
     const sourceBatch = incoming.imports.find(b => b.status === 'Posted' && !previous?.imports.some(p => p.id === b.id && p.status === 'Posted'));
     const event = { id: `AUD-${crypto.randomUUID()}`, at: now, action, detail, actor: user.displayName, ...(sourceBatch ? {sourceRef: sourceBatch.id} : {}) };
     const data: Workspace = { ...incoming, audit: [event, ...(previous?.audit ?? [])].slice(0, 50000) };
-    const encoded = JSON.stringify(data);
-    const result = stored
-      ? await env.DB.prepare('UPDATE workspaces SET data = ?, revision = revision + 1, updated_at = ? WHERE owner_id = ? AND revision = ?').bind(encoded, now, user.userId, revision).run()
-      : await env.DB.prepare('INSERT OR IGNORE INTO workspaces (owner_id, data, revision, updated_at) VALUES (?, ?, 1, ?)').bind(user.userId, encoded, now).run();
-    if (result.meta.changes !== 1) return json({ error: 'Your workspace changed. Reload before saving.' }, 409);
-    return json({ revision: revision + 1, data });
-  } catch { return json({ error: 'Your changes could not be saved. Please retry.' }, 503); }
+    const saved = await store.save(user.userId, data, revision);
+    if (!saved) return json({ error: 'Your workspace changed. Reload before saving.' }, 409);
+    return json({ revision: saved.revision, data: saved.data });
+  } catch (error) { return json({ error: workspaceStorageMessage(error) }, 503); }
 }

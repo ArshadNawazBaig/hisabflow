@@ -1,6 +1,6 @@
 # HisabFlow
 
-Private business workspace inspired by the supplied finance dashboard reference. Built with React/TypeScript on the Sites Vinext starter, Cloudflare Workers, D1, and R2. No earlier master specification or application source was supplied, so this is a new implementation rather than a migration of an existing stack.
+Private business workspace inspired by the supplied finance dashboard reference. Built with React/TypeScript on the Sites Vinext starter, Cloudflare Workers, D1 or Supabase PostgreSQL, and private R2 document storage. No earlier master specification or application source was supplied, so this is a new implementation rather than a migration of an existing stack.
 
 ## Run
 
@@ -8,10 +8,15 @@ Node 22.13+ is required. Run `npm ci`, `npm run build`, apply the generated SQL 
 
 ```sh
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_special_frog_thor.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_easy_maestro.sql
 npm run dev
 ```
 
-The browser starts with explicitly fictional, unsaved sample data. **Start your workspace** creates an empty private workspace. Sample records are never copied into a user's business automatically. Hosted structured records persist in an owner-scoped D1 snapshot with optimistic revisions. Each accepted save appends a server-authored audit event. Source files live in owner-scoped R2 paths and require authentication to retrieve.
+The browser starts with explicitly fictional, unsaved sample data. **Start your workspace** creates an empty private workspace. Sample records are never copied into a user's business automatically. Hosted structured records use an owner-scoped snapshot with optimistic revisions. D1 remains active until Supabase is configured and verified; the Supabase adapter and migration preserve the same snapshot and accounting validations. Each accepted save appends a server-authored audit event. Source files live in owner-scoped R2 paths and require authentication to retrieve.
+
+## Supabase connection
+
+The selected project is `coeazyvaghocoxuzngcc`. Follow [the Supabase setup guide](docs/supabase.md) to apply its additive PostgreSQL migration, configure the server-only credential, verify access, and activate the provider. `npm run check:supabase` performs a non-writing read/RPC readiness probe using ignored `.dev.vars` or server environment values. It does not activate Supabase or replace a controlled create/update check. No dashboard URL or prepared code alone is treated as a live connection. Existing D1 data is frozen by per-owner SQL write guards before copying; original files remain in R2.
 
 ## Implemented workflows
 

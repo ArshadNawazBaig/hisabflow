@@ -23,6 +23,7 @@ export default function HisabApp() {
   const [view,setView] = useState<View>('Overview');
   const [demo,setDemo] = useState(true);
   const [user,setUser] = useState<{name:string;email:string}|null>(null);
+  const [loadError,setLoadError] = useState('');
   const [saveStatus,setSaveStatus] = useState<'saved'|'saving'|'error'>('saved');
   const [toast,setToast] = useState('');
   const [menu,setMenu] = useState<'new'|'account'|'notifications'|null>(null);
@@ -42,7 +43,8 @@ export default function HisabApp() {
     const hash = decodeURIComponent(location.hash.slice(1)); if(nav.includes(hash as View))setView(hash as View);
     setDark(localStorage.getItem('hisab-theme')==='dark');
     fetch('/api/workspace').then(async r=> {
-      if(!r.ok)return;
+      if(!r.ok){if(r.status!==401){const failure=await r.json() as {error?:string};setLoadError(failure.error||'Your saved workspace could not be loaded.');}return;}
+      setLoadError('');
       const result=await r.json() as {data:Workspace|null;revision:number;user:{name:string;email:string}};
       setUser(result.user);revision.current=result.revision;
       if(result.data){lastSaved.current=result.data;setData(result.data);setDemo(false);demoRef.current=false;sessionStorage.removeItem('hisab-new-workspace');}
@@ -58,7 +60,7 @@ export default function HisabApp() {
           revision.current=created.revision;lastSaved.current=created.data;setData(created.data);setDemo(false);demoRef.current=false;setSaveStatus('saved');sessionStorage.removeItem('hisab-new-workspace');notify('Your private workspace is ready. Add your first company.');
         }
       }
-    }).catch(()=>{});
+    }).catch(()=>setLoadError('The server could not be reached. Your saved records have not been loaded.'));
     const hashChange=()=>{const v=decodeURIComponent(location.hash.slice(1));if(nav.includes(v as View))setView(v as View);};
     window.addEventListener('hashchange',hashChange); return()=>window.removeEventListener('hashchange',hashChange);
   },[]);
@@ -120,6 +122,7 @@ export default function HisabApp() {
 
     <main className="main-content">
       <div className="page-heading"><div><div className="eyebrow">YOUR BUSINESS, IN BALANCE <span>✳</span></div><h1>{title}</h1><p>{subtitles[view]}</p></div><div className="heading-actions">{demo?<button className="demo-label" onClick={()=>setDialog('start')}><span/>Sample workspace<ChevronDown size={13}/></button>:<span className={`save-status ${saveStatus}`} onClick={()=>saveStatus==='error'&&void flush()}>{saveStatus==='saving'?<Loader2 size={13} className="spin"/>:saveStatus==='error'?<CircleAlert size={13}/>:<CheckCheck size={14}/>} {saveStatus==='saving'?'Saving…':saveStatus==='error'?'Retry save':'All changes saved'}</span>}<div className="popover-anchor"><button className="button button-dark new-transaction" onClick={()=>setMenu(menu==='new'?null:'new')}><Plus size={17}/>New transaction<ChevronDown size={14}/></button>{menu==='new'&&<div className="popover new-popover"><small className="overline">KEEP BUSINESS MOVING</small><button onClick={()=>newRecord('company')}><Users size={17}/><span>Add company<small>A customer or a supplier</small></span></button><button onClick={()=>newRecord('delivery','Receipt')}><ArrowDownLeft size={17}/><span>Record purchase<small>Goods received from a supplier</small></span></button><button onClick={()=>newRecord('delivery','Dispatch')}><ArrowUpRight size={17}/><span>Record sale<small>Dispatch to a customer</small></span></button><button onClick={()=>newRecord('payment','Received')}><Wallet size={17}/><span>Record payment<small>Money in or money out</small></span></button><button onClick={()=>navigate('Imports')}><Upload size={17}/><span>Import statement<small>Review and reconcile a ledger</small></span></button></div>}</div></div></div>
+      {loadError&&<div className="storage-load-error" role="alert"><CircleAlert size={18}/><div><b>Your saved workspace could not load.</b><p>{loadError} The visible sample data is not your saved business records.</p></div><button className="button button-secondary" onClick={()=>location.reload()}>Retry connection<RotateCcw size={15}/></button></div>}
       {demo&&view!=='Overview'&&<div className="demo-notice"><Sparkles size={15}/><span>You’re exploring fictional sample data. Your business records stay separate.</span><button onClick={()=>setDialog('start')}>Start your workspace<ArrowRight size={14}/></button></div>}
       {view==='Overview'?<Overview {...props} onNavigate={navigate} onNew={newRecord} onDetail={setSelectedActivity}/>:view==='Companies'?<CompaniesView {...props}/>:view==='Deliveries'?<DeliveriesView {...props}/>:view==='Payments'?<PaymentsView {...props}/>:view==='Imports'?<ImportWorkflow {...props} reviewer={user?.name||'Demo user'}/>:<ReportsView {...props}/>}
       <footer className="app-footer"><span><ShieldCheck size={13}/> A private space for your business</span><span>{data.currency} <i/> {demo?'Fictional data, real possibilities':'Every entry, accounted for.'}<Leaf size={13}/></span></footer>
