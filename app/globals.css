@@ -33,3 +33,34 @@
 @media (min-width: 1440px) {
   .side-rail { top: 148px; left: 32px; }
 }
+
+/* Reserve the header's space while its navigation stays above scrolling content. */
+.app-frame {
+  --navbar-height: 93px;
+  padding-top: var(--navbar-height);
+}
+
+.topbar {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 40;
+  height: var(--navbar-height);
+  background: var(--canvas);
+  border-radius: 25px 25px 0 0;
+  box-shadow: 0 1px 0 var(--line);
+}
+
+@media (min-width: 1440px) {
+  .app-frame { --navbar-height: 104px; }
+}
+
+@media (min-width: 701px) and (max-width: 950px) {
+  .app-frame { --navbar-height: 85px; }
+}
+
+@media (max-width: 700px) {
+  .app-frame { --navbar-height: 76px; }
+  .topbar { top: 0; left: 0; right: 0; border-radius: 0; }
+}
