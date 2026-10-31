@@ -28,25 +28,33 @@ test('Supabase JSONB reads are owner-scoped and use only the modern apikey heade
   assert.equal(calls[0].url.origin,HISABFLOW_SUPABASE_URL);
   assert.equal(calls[0].url.pathname,'/rest/v1/hisabflow_workspaces');
   assert.equal(calls[0].url.searchParams.get('select'),'owner_id,data,revision');
-  assert.equal(calls[0].url.searchParams.get('owner_id'),'eq."test-owner"');
+  assert.equal(calls[0].url.searchParams.get('owner_id'),'eq.test-owner');
   assert.equal(calls[0].init.headers.apikey,secret);
   assert.equal(calls[0].init.headers.Authorization,undefined);
   assert.equal(calls[0].init.cache,'no-store');
-  assert.equal(calls[0].init.redirect,'error');
+  assert.equal(calls[0].init.redirect,'manual');
 });
 
-test('reserved owner characters remain a single quoted PostgREST literal',async()=>{
+test('reserved owner characters remain one standalone equality value without added quotes',async()=>{
   const difficult='owner.&or=(owner_id.neq.any),"name"/\\folder:tag';
   const {calls,fetcher}=mock([[storedRow(1,workspace(),difficult)]]);
   assert.equal((await make(fetcher).get(difficult)).revision,1);
   const params=calls[0].url.searchParams;
   assert.deepEqual([...params.keys()].sort(),['limit','owner_id','select']);
-  assert.equal(params.get('owner_id'),'eq."'+difficult.replaceAll('\\','\\\\').replaceAll('"','\\"')+'"');
+  assert.equal(params.get('owner_id'),'eq.'+difficult);
   assert.equal(calls[0].url.pathname,'/rest/v1/hisabflow_workspaces');
 });
 
 test('missing owner records return null without consulting another store',async()=>{
   const {calls,fetcher}=mock([[]]);assert.equal(await make(fetcher).get(owner),null);assert.equal(calls.length,1);
+});
+
+test('redirects fail without following them or forwarding privileged headers',async()=>{
+  const {calls,fetcher}=mock([new Response(null,{status:307,headers:{Location:'https://other.example/private'}})]);
+  await assert.rejects(()=>make(fetcher).get(owner),error=>error.code==='unavailable');
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].url.origin,HISABFLOW_SUPABASE_URL);
+  assert.equal(calls[0].init.redirect,'manual');
 });
 
 test('a valid legacy service_role JWT sends both required authentication headers',async()=>{

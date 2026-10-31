@@ -2,7 +2,9 @@
 
 The selected project is [HisabFlow's Supabase project](https://supabase.com/dashboard/project/coeazyvaghocoxuzngcc), with API origin `https://coeazyvaghocoxuzngcc.supabase.co`. The dashboard URL identifies the project; it does not authenticate the application or apply its schema.
 
-Preparation status: authenticated access to the remote project has not yet been verified, and this setup step has not applied remote SQL. The migration was exercised against an isolated local PostgreSQL database.
+Connection verified on 2026-10-31. The user applied the schema in the selected project's SQL Editor. Live server-key checks passed for create, read, update, stale-write rejection, insert-only migration, exact owner matching (including reserved characters), and denial of publishable-key access. The local application selected Supabase and preserved its previous D1 snapshot and revision exactly. Hosted runtime configuration selects Supabase with the credential stored as a Sites secret. A signed-in hosted user's complete read/write flow still requires verification in that visitor's session.
+
+Two isolated, empty synthetic workspaces were used for the live round trip. They contain no business records and have owner IDs beginning `hisabflow-connection-check:`. Their exact IDs are recorded locally in `outputs/supabase-live-check.json`; `outputs/supabase-live-check-cleanup.sql` removes only those two rows through an administrative SQL connection. The application intentionally retains no DELETE privilege.
 
 The database adapter stores the same complete workspace snapshot that D1 stores today. Existing accounting validation, atomic import posting, audit history, and optimistic revision checks remain in the server routes. Original documents remain in the existing private R2 bucket, so their evidence links do not change.
 

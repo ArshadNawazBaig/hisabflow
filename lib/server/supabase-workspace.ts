@@ -84,11 +84,6 @@ function canonical(value: unknown): string {
   try { return JSON.stringify(sorted(value)); }
   catch { throw new SupabaseWorkspaceError('invalid-data'); }
 }
-function quoteFilter(value: string): string {
-  // PostgREST's URL grammar reserves commas, periods, colons, and parentheses.
-  // Quote the complete literal and escape quotes/backslashes before URLSearchParams encodes it.
-  return `"${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
-}
 function credentialHeaders(key: string): Record<string, string> {
   if (typeof key !== 'string' || !key || key !== key.trim() || /\s/.test(key)) throw new SupabaseWorkspaceError('configuration');
   const headers: Record<string, string> = {
@@ -140,7 +135,9 @@ export function createSupabaseWorkspaceStore(config: SupabaseWorkspaceConfig): S
         headers: { ...headers, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...extraHeaders },
         body,
         cache: 'no-store',
-        redirect: 'error',
+        // Workers supports manual redirects; non-2xx responses fail below.
+        // Never forward the privileged headers to a redirect destination.
+        redirect: 'manual',
         signal: controller.signal,
       });
       if (!response.ok) {
@@ -167,7 +164,9 @@ export function createSupabaseWorkspaceStore(config: SupabaseWorkspaceConfig): S
     checkedOwner(ownerId);
     const url = tableUrl();
     url.searchParams.set('select', 'owner_id,data,revision');
-    url.searchParams.set('owner_id', `eq.${quoteFilter(ownerId)}`);
+    // A standalone eq filter consumes the whole value; added quotes become
+    // literal owner characters. URLSearchParams keeps it in one parameter.
+    url.searchParams.set('owner_id', `eq.${ownerId}`);
     url.searchParams.set('limit', '2');
     return oneRow(await request(url, 'GET'), ownerId);
   }
