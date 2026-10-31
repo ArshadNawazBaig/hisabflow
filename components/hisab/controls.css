@@ -7,6 +7,7 @@
 .hf-control .hf-control-trigger:disabled { cursor: not-allowed; opacity: .55; }
 .hf-control .hf-control-trigger[data-empty] { color: var(--text-muted); }
 .hf-control-value { display: block; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hf-control-leading { display: inline-flex; align-items: center; flex-shrink: 0; color: var(--text-muted); }
 .hf-control-icon { flex-shrink: 0; display: inline-flex; color: var(--text-muted); transition: transform .16s ease; }
 .hf-control-trigger[data-popup-open] > .hf-control-icon { transform: rotate(180deg); }
 .hf-control .hf-date-leading { flex-shrink: 0; color: var(--text-muted); }

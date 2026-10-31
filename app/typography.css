@@ -79,11 +79,9 @@ h1 { font-size: 36px; line-height: 1.25; }
 .button-secondary, .button-outline, .button-soft { color: var(--text-secondary); }
 .button-secondary:hover, .button-outline:hover, .button-soft:hover { background: var(--surface-subtle); color: var(--text-secondary); }
 input::placeholder, textarea::placeholder { color: var(--text-muted); opacity: 1; }
-.demo-label, .save-status, .workspace-tag, .date-selector, .date-selector select, .currency-chip { font-size: 12px; color: var(--text-secondary); }
-.date-selector { min-height: var(--field-compact-height); padding: 0 var(--field-padding-x); border-color: var(--field-border-color); border-radius: var(--field-radius); background: var(--surface-field); }
-.date-selector .hf-control-trigger { min-height: calc(var(--field-compact-height) - 2px); padding: 9px 0; border: 0; background: transparent; }
-.date-selector:focus-within { border-color: var(--field-focus-border); box-shadow: var(--field-focus-ring); }
-.date-selector .hf-control-trigger:focus-visible, .date-selector .hf-control-trigger[data-popup-open] { outline: none; box-shadow: none; }
+.demo-label, .save-status, .workspace-tag, .currency-chip { font-size: 12px; color: var(--text-secondary); }
+.currency-flag { display: block; width: 24px; height: 16px; flex-shrink: 0; border-radius: 2px; box-shadow: 0 0 0 1px #00000012; }
+.overview-topline > .hf-control { flex-shrink: 0; }
 .save-status.error { color: var(--text-red); }
 
 .card-topline, .metric-label { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
@@ -262,7 +260,6 @@ kbd { font-size: 12px; color: var(--text-muted); }
   .save-status { font-size: 12px; max-width: 96px; }
   .workspace-tag { font-size: 12px; flex-wrap: wrap; }
   .overview-topline { align-items: flex-start; gap: 10px; }
-  .date-selector { flex-shrink: 0; }
   .balance-value { font-size: 34px; }
   .metric-value { font-size: 24px; }
   .metric-label { font-size: 14px; }

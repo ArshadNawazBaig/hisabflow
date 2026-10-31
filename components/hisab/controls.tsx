@@ -20,6 +20,7 @@ type AccessibleControlProps = Pick<AriaAttributes, 'aria-label' | 'aria-labelled
 export type AppSelectOption = { value: string; label: ReactNode; disabled?: boolean };
 export type AppSelectProps = AccessibleControlProps & {
   options: AppSelectOption[];
+  leadingIcon?: ReactNode;
   value?: string;
   defaultValue?: string;
   onValueChange?: (value: string) => void;
@@ -56,7 +57,7 @@ function useControlValue(value: string | undefined, initialValue: string, root: 
 }
 
 /** One branded, keyboard-accessible select for fields and compact filters. */
-export function AppSelect({ options, value, defaultValue, onValueChange, placeholder = 'Choose an option', id, name, required, disabled, className = '', size = 'field', ...aria }: AppSelectProps) {
+export function AppSelect({ options, leadingIcon, value, defaultValue, onValueChange, placeholder = 'Choose an option', id, name, required, disabled, className = '', size = 'field', ...aria }: AppSelectProps) {
   const generatedId = useId();
   const controlId = id || `hf-select-${generatedId}`;
   const rootRef = useRef<HTMLSpanElement>(null);
@@ -82,6 +83,7 @@ export function AppSelect({ options, value, defaultValue, onValueChange, placeho
       onOpenChange={open => { if (open) setContainer(popupParent(rootRef.current)); }}
       onValueChange={next => { change(next ?? ''); setInvalid(false); }}>
       <Select.Trigger ref={triggerRef} id={controlId} type="button" className={`button hf-control-trigger hf-select-trigger ${className}`} {...aria} aria-describedby={description} aria-invalid={invalid || aria['aria-invalid'] || undefined} aria-required={required || undefined} data-empty={!current || undefined}>
+        {leadingIcon && <span className="hf-control-leading" aria-hidden="true">{leadingIcon}</span>}
         <Select.Value className="hf-control-value">{selected?.label ?? placeholder}</Select.Value>
         <Select.Icon className="hf-control-icon"><ChevronDown size={16}/></Select.Icon>
       </Select.Trigger>
