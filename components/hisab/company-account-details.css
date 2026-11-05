@@ -1,0 +1,112 @@
+.company-account-details { min-width:0; }
+.ca-company-identity { display:flex; gap:13px; align-items:flex-start; margin-bottom:22px; }
+.ca-company-symbol { display:grid; place-items:center; width:46px; height:46px; flex-shrink:0; border-radius:15px; color:var(--text-green); background:var(--status-green-bg); }
+.ca-company-identity > div { min-width:0; }
+.ca-company-identity h3 { margin:0; font-size:22px; line-height:1.4; letter-spacing:-.5px; color:var(--text-primary); overflow-wrap:anywhere; }
+.ca-company-identity p { margin-top:6px; font-size:12px; line-height:1.7; color:var(--text-secondary); overflow-wrap:anywhere; }
+.ca-company-status { display:inline-flex; margin-top:8px; padding:3px 8px; border-radius:20px; background:var(--surface-subtle); color:var(--text-secondary); font-size:10px; line-height:1.5; }
+.ca-company-status.is-active { background:var(--status-green-bg); color:var(--status-green-text); }
+.ca-summary { margin:0; display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:12px; }
+.ca-summary-supplier { grid-template-columns:1fr; }
+.ca-summary > div { min-width:0; padding:18px; border-radius:17px; border:1px solid var(--border-subtle); background:var(--surface-subtle); }
+.ca-summary > .ca-balance { background:color-mix(in srgb,var(--status-green-bg) 48%,var(--paper)); }
+.ca-summary > .ca-balance.is-due { background:color-mix(in srgb,var(--status-red-bg) 34%,var(--paper)); }
+.ca-summary dt { display:block; font-size:12px; font-weight:500; color:var(--text-secondary); line-height:1.6; }
+.ca-summary dd { margin:0; }
+.ca-summary strong { display:block; margin-top:12px; font-size:27px; line-height:1.35; letter-spacing:-.65px; font-weight:600; }
+.ca-balance.is-due strong { color:var(--text-red); }
+.ca-balance.is-credit strong { color:var(--text-green); }
+.ca-summary small { display:block; margin-top:9px; font-size:11px; line-height:1.6; color:var(--text-muted); }
+.ca-money { display:inline-flex; flex-wrap:wrap; align-items:baseline; gap:4px 7px; max-width:100%; font-variant-numeric:tabular-nums; }
+.ca-money .ca-currency { font-size:12px; letter-spacing:0; font-weight:500; }
+.ca-money .ca-number { white-space:nowrap; }
+.ca-money.is-medium .ca-number { font-size:21px; letter-spacing:-.4px; }
+.ca-money.is-long .ca-number { font-size:17px; letter-spacing:-.3px; }
+.ca-summary:has(.ca-money.is-long) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.ca-summary > div:has(.ca-money.is-long) { grid-column:1/-1; }
+.ca-balance-help { margin:14px 0 0; font-size:12px; line-height:1.75; color:var(--text-secondary); }
+.ca-quick-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:20px; }
+.company-account-details .ca-quick-actions .button,.company-account-details .ca-record-card .button { min-height:44px; border-radius:11px; padding:10px 13px; font-size:13px; white-space:normal; }
+.ca-tabs { display:flex; gap:8px; overflow-x:auto; margin:25px 0 22px; padding:5px; border:1px solid var(--border-subtle); border-radius:14px; background:var(--surface-subtle); scrollbar-width:thin; }
+.ca-tabs > button { display:flex; align-items:center; justify-content:center; gap:7px; min-height:44px; padding:10px 13px; border-radius:10px; flex:1; font-size:13px; font-weight:600; color:var(--text-secondary); white-space:nowrap; }
+.ca-tabs > button[aria-selected=true] { background:var(--paper); color:var(--text-primary); box-shadow:0 3px 8px #1028190c; }
+.ca-tabs > button > span { padding:1px 6px; min-width:20px; border-radius:6px; font-size:11px; color:var(--text-muted); background:var(--surface-subtle); }
+.ca-section-heading { margin-bottom:16px; }
+.ca-section-heading h4 { margin:0; font-size:16px; font-weight:600; color:var(--text-primary); line-height:1.5; }
+.ca-section-heading p { margin-top:5px; font-size:12px; line-height:1.75; color:var(--text-secondary); }
+.ca-record-list { display:grid; gap:15px; min-width:0; }
+.ca-record-card { min-width:0; padding:19px; border:1px solid var(--border-subtle); border-radius:19px; background:var(--paper); box-shadow:0 7px 20px -16px #10281930; }
+.ca-record-card > header { display:flex; align-items:flex-start; gap:11px; }
+.ca-record-card > header > div { min-width:0; flex:1; }
+.ca-record-icon { display:grid; place-items:center; width:38px; height:38px; border-radius:12px; flex-shrink:0; color:var(--text-green); background:var(--status-green-bg); }
+.ca-record-icon.is-paid { color:var(--text-amber); background:var(--status-amber-bg); }
+.ca-record-card h5 { margin:0; font-size:15px; font-weight:600; line-height:1.5; color:var(--text-primary); overflow-wrap:anywhere; }
+.ca-record-card header p { margin-top:4px; font-size:11px; line-height:1.7; color:var(--text-muted); overflow-wrap:anywhere; }
+.ca-status { display:inline-flex; align-items:center; gap:4px; flex-shrink:0; max-width:100%; padding:4px 8px; border-radius:20px; background:var(--surface-subtle); color:var(--text-secondary); font-size:10px; line-height:1.5; }
+.ca-status.is-approved { background:var(--status-green-bg); color:var(--status-green-text); }
+.ca-status.is-review { background:var(--status-amber-bg); color:var(--status-amber-text); }
+.ca-payment-amount { margin:17px 0; padding:14px 15px; border:1px solid color-mix(in srgb,var(--border-subtle) 70%,transparent); border-radius:13px; background:var(--surface-subtle); }
+.ca-payment-amount > span { display:block; font-size:11px; line-height:1.6; color:var(--text-secondary); }
+.ca-payment-amount > strong { display:block; margin-top:9px; font-size:25px; line-height:1.4; letter-spacing:-.6px; }
+.ca-payment-amount.is-received > strong { color:var(--text-green); }
+.ca-meta { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:15px 18px; margin:0; }
+.ca-meta > div { min-width:0; }
+.ca-meta dt { margin-bottom:4px; font-size:11px; line-height:1.6; color:var(--text-muted); }
+.ca-meta dd { margin:0; font-size:13px; font-weight:500; line-height:1.7; color:var(--text-primary); overflow-wrap:anywhere; }
+.ca-meta a { display:inline-flex; align-items:center; flex-wrap:wrap; gap:4px; color:var(--text-green); overflow-wrap:anywhere; }
+.ca-meta .ca-money { font-size:15px; }
+.ca-meta .ca-money.is-long .ca-number { font-size:15px; }
+.ca-meta .ca-money .ca-currency { font-size:11px; }
+.ca-meta > div:has(.ca-money.is-long) { grid-column:1/-1; }
+.ca-record-card > footer { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-top:17px; padding-top:15px; border-top:1px solid var(--border-subtle); }
+.ca-record-card footer small { color:var(--text-muted); font-size:11px; line-height:1.6; }
+.ca-record-card > footer > .button { margin-left:auto; }
+.ca-record-card.ca-statement-card .ca-meta { margin-top:17px; }
+.ca-tab-panel > .hf-infinite-footer { margin-top:16px; padding:15px 0 0; }
+.ca-empty { display:flex; align-items:center; flex-direction:column; padding:32px 17px; text-align:center; border:1px dashed var(--border-subtle); border-radius:17px; background:var(--surface-subtle); color:var(--text-secondary); }
+.ca-empty > svg { color:var(--text-muted); }
+.ca-empty h4 { margin:15px 0 0; font-size:16px; line-height:1.5; font-weight:600; color:var(--text-primary); }
+.ca-empty p { max-width:40ch; margin-top:7px; font-size:12px; line-height:1.75; overflow-wrap:anywhere; }
+.ca-aliases { margin-top:22px; padding-top:16px; border-top:1px solid var(--border-subtle); color:var(--text-muted); font-size:12px; line-height:1.7; overflow-wrap:anywhere; }
+.ca-aliases b { display:block; color:var(--text-secondary); font-size:11px; margin-bottom:5px; }
+@media (max-width:700px), (max-width:1100px) and (orientation:landscape) and (pointer:coarse) {
+  .ca-company-identity h3 { font-size:20px; }
+  .ca-company-symbol { width:40px; height:40px; border-radius:13px; }
+  .hf-company-account-modal .hf-modal-header h2 { font-size:22px; }
+  .ca-summary,.ca-summary:has(.ca-money.is-long) { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .ca-summary > div { padding:14px; }
+  .ca-summary > .ca-balance { grid-column:1/-1; }
+  .ca-summary strong { margin-top:8px; font-size:26px; }
+  .ca-summary small { margin-top:6px; }
+  .ca-summary > .ca-summary-tile { display:block; padding:12px; }
+  .ca-summary-tile strong { font-size:19px; }
+  .ca-summary-tile small { margin-top:4px; }
+  .ca-summary > .ca-summary-tile:has(.ca-money.is-medium,.ca-money.is-long) { grid-column:1/-1; }
+  .ca-summary-tile:has(.ca-money.is-medium,.ca-money.is-long) strong { margin-top:9px; }
+  .ca-quick-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .ca-quick-actions > .button:first-child { grid-column:1/-1; }
+  .ca-tabs { gap:3px; padding:4px; margin-top:22px; }
+  .ca-tabs > button { padding:9px 7px; gap:5px; font-size:12px; }
+  .ca-tabs > button > span { min-width:16px; font-size:10px; padding:1px 4px; }
+  .ca-record-card { padding:16px; }
+  .ca-record-card > header { display:grid; grid-template-columns:38px minmax(0,1fr); }
+  .ca-record-card > header > .ca-status { grid-column:2; justify-self:start; margin-top:-3px; }
+  .ca-record-card > footer > .button { width:100%; justify-content:space-between; }
+}
+@media (max-width:380px) {
+  .ca-company-identity { gap:10px; }
+  .ca-company-identity h3 { font-size:18px; }
+  .ca-summary-tile { display:block; }
+  .ca-summary-tile > strong { margin-top:8px; }
+  .ca-tabs > button { flex-direction:column; gap:3px; padding:7px; }
+  .ca-meta { grid-template-columns:1fr; gap:13px; }
+  .ca-money.is-long .ca-number { font-size:15px; }
+}
+
+.ca-meta > div:has(.ca-application-links) { grid-column:1/-1; }
+.ca-application-links { display:grid; gap:10px; margin:0; padding:0; list-style:none; }
+.ca-application-links li { min-width:0; padding:11px 12px; border:1px solid var(--border-subtle); border-radius:11px; background:var(--surface-subtle); }
+.ca-application-links li > b { display:block; font-size:12px; line-height:1.7; font-weight:600; overflow-wrap:anywhere; }
+.ca-application-links li > small { display:block; margin-top:2px; font-size:11px; line-height:1.7; color:var(--text-muted); overflow-wrap:anywhere; }
+.ca-application-links li > span { display:flex; align-items:baseline; flex-wrap:wrap; gap:5px 14px; margin-top:6px; }
+.ca-application-links time { color:var(--text-secondary); font-size:11px; line-height:1.6; }

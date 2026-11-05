@@ -68,3 +68,7 @@
   .app-frame .modal-backdrop.rv-overlay { --hf-dialog-top:max(12px,env(safe-area-inset-top,0px)); --hf-dialog-bottom:max(12px,env(safe-area-inset-bottom,0px)); padding:var(--hf-dialog-top) max(12px,env(safe-area-inset-right,0px)) var(--hf-dialog-bottom) max(12px,env(safe-area-inset-left,0px)); }
   .app-frame .modal.hf-modal { max-height:calc(var(--hf-modal-viewport-height,100dvh) - var(--hf-dialog-top) - var(--hf-dialog-bottom)); }
 }
+
+.toast .toast-message { min-width:0; flex:1; overflow-wrap:anywhere; }
+.app-frame .toast > button { flex-shrink:0; margin-left:0; }
+.app-frame .toast > span:first-child { flex-shrink:0; }

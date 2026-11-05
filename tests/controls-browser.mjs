@@ -106,6 +106,7 @@ try{
   await page.screenshot({path:'outputs/custom-controls-import.png',animations:'disabled'});
   await navigate('Companies');
   const customer=page.locator('.rv-table tbody tr:visible,.rv-record-card:visible').filter({hasText:'QA Customer'});if(await customer.locator('button').filter({hasText:'View details'}).count())await customer.getByRole('button',{name:'View details',exact:true}).click();else await customer.click();
+  await modal.getByRole('tab',{name:/^Statements/}).click();
   await modal.getByRole('button',{name:'Review statement',exact:true}).click();
   await page.locator('.import-document-heading h2').filter({hasText:'QA control statement.pdf'}).waitFor();
   assert.deepEqual(errors,[]);

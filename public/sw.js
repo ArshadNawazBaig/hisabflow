@@ -1,7 +1,7 @@
 /* Public app resources only. Private pages, identity, and records stay on the network. */
 const CACHE_PREFIX = 'hisabflow-public-';
 // Bump this version when replacing an unversioned brand resource or cache policy.
-const CACHE_NAME = `${CACHE_PREFIX}v1`;
+const CACHE_NAME = `${CACHE_PREFIX}v2`;
 const OFFLINE_URL = '/offline';
 const PRECACHE_URLS = [OFFLINE_URL, '/favicon.svg'];
 const MAX_CACHE_ENTRIES = 80;

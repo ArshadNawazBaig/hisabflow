@@ -307,3 +307,5 @@
  .rv-activity-item { display:grid; grid-template-columns:34px minmax(0,1fr); align-items:start; }
  .rv-activity-item>.rv-badge,.rv-activity-item>b { grid-column:2; justify-self:start; }
 }
+
+.rv-record-card-amount.rv-account-due { color:var(--text-red); }

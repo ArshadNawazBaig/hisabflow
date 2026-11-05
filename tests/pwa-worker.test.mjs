@@ -39,7 +39,7 @@ function harness({ network = async request => new URL(request.url).pathname === 
       }
     },
   };
-  vm.runInNewContext(source, { self, caches, URL, Request, Response, fetch: async request => { requests.push(request); return network(request); } });
+  const cacheName=vm.runInNewContext(source+'\nCACHE_NAME', { self, caches, URL, Request, Response, fetch: async request => { requests.push(request); return network(request); } });
   const dispatch = async (name, values = {}) => {
     const pending = []; let response;
     handlers.get(name)({ ...values, waitUntil: promise => pending.push(promise), respondWith: promise => { response = promise; } });
@@ -48,7 +48,7 @@ function harness({ network = async request => new URL(request.url).pathname === 
     return resolved;
   };
   const request = (pathname, options = {}) => ({ url: new URL(pathname, origin).href, method: 'GET', mode: 'cors', cache: 'default', headers: new Headers(), ...options });
-  return { self, caches, stores, requests, dispatch, request,
+  return { self, caches, stores, requests, dispatch, request, cacheName,
     fetch: (pathname, options) => dispatch('fetch', { request: request(pathname, options) }),
     cachedPaths: () => [...stores.values()].flatMap(store => [...store.keys()].map(url => new URL(url).pathname)),
   };
@@ -65,7 +65,7 @@ test('activation removes only older HisabFlow public caches and claims existing 
   const app = harness(); await app.dispatch('install');
   await app.caches.open('hisabflow-public-v0'); await app.caches.open('another-app-cache');
   await app.dispatch('activate');
-  assert.deepEqual(await app.caches.keys(), ['hisabflow-public-v1', 'another-app-cache']);
+  assert.deepEqual(await app.caches.keys(), [app.cacheName, 'another-app-cache']);
   assert.equal(app.self.claims, 1);
 });
 
@@ -99,7 +99,7 @@ test('navigation always fetches the latest protected document and never persists
 
 test('offline navigation uses only the generic public page, without financial or identity caches', async () => {
   const app = harness({ network: async () => { throw new TypeError('Offline'); } });
-  const cache = await app.caches.open('hisabflow-public-v1'); await cache.put('/offline', html('Generic offline screen'));
+  const cache = await app.caches.open(app.cacheName); await cache.put('/offline', html('Generic offline screen'));
   const response = await app.fetch('/', { mode: 'navigate' });
   assert.equal(await response.text(), 'Generic offline screen');
   assert.deepEqual(app.cachedPaths(), ['/offline']);

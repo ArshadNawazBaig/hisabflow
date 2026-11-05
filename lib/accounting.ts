@@ -1,4 +1,5 @@
 import type { ImportBatch, Payment, Shipment, SourceRow, Workspace } from './types';
+import { validateAdvanceApplications } from './company-account.ts';
 
 /** Decimal arithmetic uses integer minor units. Never coerce money through floating point. */
 function scaled(value: string, places = 2): bigint {
@@ -339,7 +340,7 @@ export function validateWorkspaceRecords(incoming: Workspace, previous: Workspac
     const reason = importDeletionReason(previous!, source.id) || importLinkDeletionReason(incoming, source.id, source.postedRecordIds);
     if (reason) errors.push(`${source.name}: ${reason}`);
   }
-  errors.push(...reviewCostAllocations(incoming).errors);
+  errors.push(...reviewCostAllocations(incoming).errors, ...validateAdvanceApplications(incoming, previous));
   const companies = new Map(incoming.companies.map(c => [c.id, c]));
   for (const shipment of incoming.shipments) {
     const prefix = `${shipment.id}:`, company = companies.get(shipment.companyId);
