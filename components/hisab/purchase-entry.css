@@ -1,0 +1,14 @@
+.hf-purchase-entry-note { margin-bottom:20px; padding:16px; border:1px solid var(--border-subtle); border-radius:14px; background:var(--surface-subtle); }
+.hf-purchase-entry-note b { display:block; font-size:15px; line-height:1.5; }
+.hf-purchase-entry-note p { margin-top:6px; color:var(--text-secondary); font-size:13px; line-height:1.75; }
+.hf-purchase-entry-error { padding:13px 15px; margin:0 0 18px; border-radius:12px; background:var(--status-red-bg); color:var(--status-red-text); font-size:13px; line-height:1.7; }
+.hf-purchase-supplier-action { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-top:-2px; padding:14px; border-radius:12px; background:var(--surface-subtle); }
+.hf-purchase-supplier-action p { flex:1; min-width:min(190px,100%); color:var(--text-secondary); font-size:13px; line-height:1.6; }
+.hf-purchase-supplier-action .button { min-height:44px; }
+.hf-sale-payment-actions { display:flex; flex-wrap:wrap; gap:9px; margin:18px 0 4px; }
+.hf-sale-payment-actions .button { min-height:44px; white-space:normal; }
+.hf-sale-purchase-costs { margin:22px 0; padding:18px; border:1px solid var(--border-subtle); border-radius:16px; }
+.hf-sale-purchase-costs h3 { margin:0; font-size:16px; line-height:1.5; }
+.hf-sale-purchase-costs p { margin:9px 0 15px; font-size:13px; line-height:1.75; color:var(--text-secondary); }
+.hf-sale-purchase-costs .button { min-height:44px; white-space:normal; }
+@media(max-width:430px){.hf-sale-payment-actions{display:grid;grid-template-columns:1fr}.hf-sale-purchase-costs .button{width:100%}.hf-purchase-supplier-action .button{width:100%}}

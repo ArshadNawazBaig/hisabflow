@@ -1,5 +1,6 @@
 import type { ImportBatch, Payment, Shipment, SourceRow, Workspace } from './types';
 import { validateAdvanceApplications } from './company-account.ts';
+import { canonicalDeliveryUnit, normalizeDeliveryLabel } from './delivery-units.ts';
 
 /** Decimal arithmetic uses integer minor units. Never coerce money through floating point. */
 function scaled(value: string, places = 2): bigint {
@@ -245,9 +246,9 @@ function reviewCostAllocations(data: Workspace): { errors: string[]; invalidSale
         if (!quantityValid) { issue(sale.id, 'allocation quantities must be positive decimals with up to six decimal places.'); continue; }
         totalWeight = quantityAdd(totalWeight, allocation.weight);
         register(source.id, allocation.weight, sale.id);
-        if (!source.unit.trim() || source.unit.trim().toLowerCase() !== sale.unit.trim().toLowerCase()) issue(sale.id, 'allocated purchase sources must use the same approved unit as the dispatch.');
-        if (!source.product.trim() || source.product.trim().toLowerCase() !== sale.product.trim().toLowerCase()) issue(sale.id, 'allocated purchase sources must contain the same product as the dispatch.');
-        if (source.grade && sale.grade && source.grade.trim().toLowerCase() !== sale.grade.trim().toLowerCase()) issue(sale.id, 'allocated grades differ and require a reviewed adjustment.');
+        if (!canonicalDeliveryUnit(source.unit) || canonicalDeliveryUnit(source.unit) !== canonicalDeliveryUnit(sale.unit)) issue(sale.id, 'allocated purchase sources must use the same approved unit as the dispatch.');
+        if (!normalizeDeliveryLabel(source.product) || normalizeDeliveryLabel(source.product) !== normalizeDeliveryLabel(sale.product)) issue(sale.id, 'allocated purchase sources must contain the same product as the dispatch.');
+        if (normalizeDeliveryLabel(source.grade ?? '') && normalizeDeliveryLabel(sale.grade ?? '') && normalizeDeliveryLabel(source.grade ?? '') !== normalizeDeliveryLabel(sale.grade ?? '')) issue(sale.id, 'allocated grades differ and require a reviewed adjustment.');
         try {
           if (!validMoney(allocation.amount) || compare(multiply(allocation.weight, source.rate), allocation.amount) !== 0) issue(sale.id, 'allocated cost must equal the reviewed source rate multiplied by allocated quantity.');
           if (validMoney(allocation.amount)) totalCost = add(totalCost, allocation.amount);
@@ -266,8 +267,8 @@ function reviewCostAllocations(data: Workspace): { errors: string[]; invalidSale
       if (source?.matchConfirmed && source.matchedId === sale.id) {
         try { if (!!source.weight !== !!sale.weight || (source.weight && sale.weight && quantityCompare(source.weight, sale.weight) !== 0)) issue(sale.id, 'one-to-one match quantities differ; allocate the purchase costs explicitly.'); }
         catch { issue(sale.id, 'one-to-one match quantities remain unresolved.'); }
-        if (source.unit && sale.unit && source.unit.trim().toLowerCase() !== sale.unit.trim().toLowerCase()) issue(sale.id, 'one-to-one match units differ.');
-        if (source.product && sale.product && source.product.trim().toLowerCase() !== sale.product.trim().toLowerCase()) issue(sale.id, 'one-to-one match products differ.');
+        if (source.unit && sale.unit && canonicalDeliveryUnit(source.unit) !== canonicalDeliveryUnit(sale.unit)) issue(sale.id, 'one-to-one match units differ.');
+        if (source.product && sale.product && normalizeDeliveryLabel(source.product) !== normalizeDeliveryLabel(sale.product)) issue(sale.id, 'one-to-one match products differ.');
         if (sale.weight) register(source.id, sale.weight, sale.id);
       }
     }
@@ -363,7 +364,7 @@ export function validateWorkspaceRecords(incoming: Workspace, previous: Workspac
         try { if (!!match.weight !== !!shipment.weight || (match.weight && shipment.weight && scaled(match.weight, 6) !== scaled(shipment.weight, 6))) errors.push(`${prefix} quantities differ; review and allocate costs before confirming a margin.`); }
         catch { errors.push(`${prefix} match quantities must be valid reviewed decimals.`); }
       }
-      if (match && match.unit.trim().toLowerCase() !== shipment.unit.trim().toLowerCase()) errors.push(`${prefix} match quantities must use the same approved unit.`);
+      if (match && canonicalDeliveryUnit(match.unit) !== canonicalDeliveryUnit(shipment.unit)) errors.push(`${prefix} match quantities must use the same approved unit.`);
     }
   }
   for (const payment of incoming.payments) {
