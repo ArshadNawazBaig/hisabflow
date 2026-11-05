@@ -1,10 +1,11 @@
+import { browserLaunchOptions } from './browser-support.mjs';
 import { chromium } from '@playwright/test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 
-const base='http://127.0.0.1:5173';
+const base=process.env.HISABFLOW_TEST_ORIGIN || 'http://127.0.0.1:5173';
 await mkdir('outputs',{recursive:true});
-const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+const browser=await chromium.launch(browserLaunchOptions());
 try{
   const context=await browser.newContext({viewport:{width:1440,height:1000}});
   for(const options of [{path:'/'},{path:'/?_rsc',headers:{RSC:'1'}},{path:'/',headers:{'oai-authenticated-user-id':'forged-owner','oai-authenticated-user-email':'forged@example.invalid',Cookie:'__sites_local_auth=1'}}]){

@@ -22,3 +22,6 @@
 [data-theme=dark] .hf-combobox-popup { box-shadow: 0 14px 40px #0005; }
 @media (pointer: coarse) { .hf-combobox-option { min-height: 44px; } }
 @media (prefers-reduced-motion: reduce) { .hf-combobox-toggle svg { transition: none; } }
+@media (max-width: 700px), (pointer: coarse) {
+  .hf-combobox .hf-combobox-toggle { width:44px; min-height:44px; }
+}

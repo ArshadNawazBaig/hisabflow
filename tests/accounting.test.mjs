@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { add, subtract, multiply, reconcile, validateImport, postImport, confirmedMargin, validatePostedChanges, validateWorkspaceRecords, affectsCash, companyDeletionReason } from '../lib/accounting.ts';
+import { add, subtract, multiply, reconcile, validateImport, postImport, confirmedMargin, validatePostedChanges, validateWorkspaceRecords, affectsCash, companyDeletionReason, importDeletionReason } from '../lib/accounting.ts';
 
 const workspace = () => ({ business:'Private test business',currency:'PKR',openingCash:'0.00',companies:[{id:'supplier',name:'Fictional supplier',role:'Supplier',aliases:[],balance:'0.00',status:'Active'},{id:'customer',name:'Fictional customer',role:'Customer',aliases:[],balance:'0.00',status:'Active'}],shipments:[],payments:[],imports:[],audit:[] });
 const sourceRow = (changes={}) => ({id:'r1',page:1,sequence:1,rawDate:'16/10/2026',proposedDate:'2026-10-16',effectiveDate:'2026-10-16',description:'Goods delivered',party:'Warehouse A',vehicle:'DEMO-001',weight:'2.125',rate:'40000.00',goods:'85000.00',paid:'0.00',balance:'85000.00',reference:'',kind:'goods',status:'Approved',issues:[],raw:'16/10/2026 Goods delivered Warehouse A DEMO-001 2.125 40000 85000',reviewer:'Reviewer',reviewedAt:'2026-10-31T00:00:00Z',...changes});
@@ -82,6 +82,34 @@ test('overlap detection uses multiple row attributes, not amount or TID alone',(
   assert.ok(validateImport(newBatch,posted).some(e=>e.includes('overlap')));
   newBatch.rows[0].description='A separate legitimate delivery';
   assert.ok(!validateImport(newBatch,posted).some(e=>e.includes('overlap')));
+});
+test('row overlap protection survives decimal formatting and whitespace changes',()=>{
+  const before=postImport(batch(),workspace(),'Reviewer');
+  const copy=batch({id:'FORMATTED-COPY',hash:'different-file-format',rows:[sourceRow({weight:'2.125000',goods:'85000',paid:'0',description:'  Goods   delivered  ',party:'  WAREHOUSE A ',vehicle:'demo-001'})]});
+  assert.ok(validateImport(copy,before).some(error=>error.includes('potential overlap')));
+  assert.throws(()=>postImport(copy,before,'Reviewer'),/potential overlap/);
+});
+test('opening-balance activity cannot extend beyond the agreed cutoff',()=>{
+  const source=batch();source.mapping.mode='Opening balance';source.mapping.cutoff='2026-10-15';
+  assert.ok(validateImport(source,workspace()).some(error=>error.includes('on or before')));
+  assert.throws(()=>postImport(source,workspace(),'Reviewer'),/on or before/);
+  source.mapping.cutoff='2026-10-16';assert.deepEqual(validateImport(source,workspace()),[]);
+});
+test('import review rejects zero-value transactions and invalid paired quantities before posting',()=>{
+  const empty=batch({rows:[sourceRow({goods:'0',paid:'0',balance:'0',weight:'',rate:''})]});empty.mapping.expectedClosing='0';
+  assert.ok(validateImport(empty,workspace()).some(error=>error.includes('positive goods or payment')));
+  const invalid=batch({rows:[sourceRow({weight:'-2.125',rate:'-40000'})]});
+  const errors=validateImport(invalid,workspace());
+  assert.ok(errors.some(error=>error.includes('weight must be a nonnegative')));
+  assert.ok(errors.some(error=>error.includes('valid nonnegative source rate')));
+  const missingRate=batch({rows:[sourceRow({rate:''})]});
+  assert.ok(validateImport(missingRate,workspace()).some(error=>error.includes('valid nonnegative source rate')));
+});
+test('third-party imported settlements follow the allocated company role',()=>{
+  const source=batch({rows:[sourceRow({weight:'',rate:'',goods:'0',paid:'100',balance:'-100',kind:'payment',actor:'External recipient',companyId:'customer',treatment:'Payment on behalf'})]});
+  source.mapping.expectedClosing='-100';
+  assert.ok(validateImport(source,workspace()).some(error=>error.includes('third-party settlement')));
+  source.rows[0].companyId='supplier';assert.deepEqual(validateImport(source,workspace()),[]);
 });
 test('an opening balance cannot be posted over the imported history',()=>{
   const b=batch(), posted=postImport(b,workspace(),'Reviewer');
@@ -368,4 +396,57 @@ test('new incoming statement allocations and on-behalf payment references also b
   assert.ok(validateWorkspaceRecords(removed,before).some(message=>message.includes('linked statements')));
   removed.imports=[];removed.payments=[payment({onBehalfOf:'supplier'})];removed.companies.find(company=>company.id==='customer').balance='-10000.00';
   assert.ok(validateWorkspaceRecords(removed,before).some(message=>message.includes('payment records')));
+});
+
+test('an unlinked draft statement can be removed without changing business records or audit history',()=>{
+  const before=workspace();before.imports=[batch()];before.companies[0].balance='123.45';
+  before.audit=[{id:'audit-import',at:'2026-10-31T00:00:00Z',action:'Statement extracted',detail:'synthetic.pdf',actor:'Synthetic reviewer'}];
+  const original=structuredClone(before),incoming=structuredClone(before);incoming.imports=[];
+  assert.equal(importDeletionReason(before,'BATCH-1'),null);
+  assert.deepEqual(validateWorkspaceRecords(incoming,before),[]);
+  assert.deepEqual(validatePostedChanges(incoming,before,'Synthetic reviewer'),[]);
+  for(const collection of ['companies','shipments','payments','audit']) assert.deepEqual(incoming[collection],original[collection]);
+  assert.deepEqual(before,original);assert.equal(before.imports[0].fileKey,'owners/test/synthetic.pdf');
+});
+
+test('missing statements and posted accounting evidence cannot be deleted',()=>{
+  assert.match(importDeletionReason(workspace(),'missing'),/no longer exists/);
+  const posted=postImport(batch(),workspace(),'Reviewer');
+  assert.match(importDeletionReason(posted,'BATCH-1'),/Posted statements cannot be deleted/);
+  const removed=structuredClone(posted);removed.imports=[];
+  assert.ok(validatePostedChanges(removed,posted,'Reviewer').some(message=>message.includes('immutable')));
+});
+
+test('delivery, payment and retained accounting links prevent draft statement deletion',()=>{
+  for(const link of ['shipment','payment','recordIds']) {
+    const before=workspace();before.imports=[batch()];
+    if(link==='shipment') before.shipments=[shipment({sourceRef:'BATCH-1'})];
+    if(link==='payment') before.payments=[payment({sourceRef:'BATCH-1'})];
+    if(link==='recordIds') before.imports[0].postedRecordIds=['SHP-retained-link'];
+    assert.match(importDeletionReason(before,'BATCH-1'),/source history/);
+    const removed=structuredClone(before);removed.imports=[];
+    assert.ok(validateWorkspaceRecords(removed,before).some(message=>message.includes('source history')));
+  }
+});
+
+test('removing linked financial records simultaneously cannot bypass the stored draft deletion guard',()=>{
+  for(const link of ['shipment','payment']) {
+    const before=workspace();before.imports=[batch()];
+    if(link==='shipment') {before.shipments=[shipment({sourceRef:'BATCH-1'})];before.companies[0].balance='-28000.00';}
+    else {before.payments=[payment({sourceRef:'BATCH-1'})];before.companies[1].balance='-10000.00';}
+    const removed=structuredClone(before);removed.imports=[];removed.shipments=[];removed.payments=[];removed.companies.forEach(company=>company.balance='0.00');
+    const failures=validateWorkspaceRecords(removed,before);
+    assert.ok(failures.some(message=>message.includes('source history')));
+    assert.ok(!failures.some(message=>message.includes('balance change')), 'Reviewed balance reversal alone cannot erase retained source history.');
+  }
+});
+
+test('new records cannot reference a draft which the same save removes',()=>{
+  for(const link of ['shipment','payment']) {
+    const before=workspace();before.imports=[batch()];
+    const incoming=structuredClone(before);incoming.imports=[];
+    if(link==='shipment') {incoming.shipments=[shipment({sourceRef:'BATCH-1'})];incoming.companies[0].balance='-28000.00';}
+    else {incoming.payments=[payment({sourceRef:'BATCH-1'})];incoming.companies[1].balance='-10000.00';}
+    assert.ok(validateWorkspaceRecords(incoming,before).some(message=>message.includes('source history')));
+  }
 });

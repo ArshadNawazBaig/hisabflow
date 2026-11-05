@@ -4,6 +4,8 @@ import { validatePostedChanges, validateWorkspaceRecords } from '@/lib/accountin
 import { saveSchema } from '@/lib/workspace-validation';
 import type { Workspace } from '@/lib/types';
 import { getWorkspaceStore, configuredWorkspaceProvider, workspaceStorageMessage } from '@/lib/server/workspace-store';
+import { readBoundedBody, RequestBodyTooLargeError } from '@/lib/server/request-body';
+import { workspaceOwnerFailure } from '@/lib/server/workspace-access';
 
 export const dynamic = 'force-dynamic';
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers: AUTH_RESPONSE_HEADERS });
@@ -13,7 +15,7 @@ export async function GET() {
   if (!user) return json({ error: 'Sign in to access your private business workspace.' }, 401);
   try {
     const row = await getWorkspaceStore().get(user.userId);
-    return json({ data: row?.data ?? null, revision: row?.revision ?? 0, storage: configuredWorkspaceProvider(), user: { name: user.displayName, email: user.email, provider: user.provider, canLinkGoogle: user.canLinkGoogle } });
+    return json({ data: row?.data ?? null, revision: row?.revision ?? 0, storage: configuredWorkspaceProvider(), user: { id: user.userId, name: user.displayName, email: user.email, provider: user.provider, canLinkGoogle: user.canLinkGoogle } });
   } catch (error) { return json({ error: workspaceStorageMessage(error) }, 503); }
 }
 
@@ -22,11 +24,15 @@ export async function PUT(request: Request) {
   try { user = await getWorkspaceUser(); } catch (error) { return authErrorResponse(error); }
   if (!user) return json({ error: 'Sign in before saving business records.' }, 401);
   const origin = request.headers.get('origin');
-  if (origin && origin !== new URL(request.url).origin) return json({ error: 'Cross-origin writes are not allowed.' }, 403);
-  if (Number(request.headers.get('content-length') || 0) > 8 * 1024 * 1024) return json({ error: 'Workspace is too large.' }, 413);
+  if ((origin && origin !== new URL(request.url).origin) || request.headers.get('sec-fetch-site') === 'cross-site') return json({ error: 'Cross-origin writes are not allowed.' }, 403);
+  const ownerFailure = workspaceOwnerFailure(request, user.userId);
+  if (ownerFailure) return json({ error: ownerFailure.error, code: ownerFailure.code }, ownerFailure.status);
   let body: unknown;
-  try { const raw = await request.text(); if (raw.length > 8 * 1024 * 1024) return json({error:'Workspace is too large.'},413); body = JSON.parse(raw); }
-  catch { return json({ error: 'Send valid JSON.' }, 400); }
+  try { body = JSON.parse(new TextDecoder().decode(await readBoundedBody(request, 8 * 1024 * 1024))); }
+  catch (error) {
+    if (error instanceof RequestBodyTooLargeError) return json({ error: 'Workspace is too large.' }, 413);
+    return json({ error: 'Send valid JSON.' }, 400);
+  }
   const parsed = saveSchema.safeParse(body);
   if (!parsed.success) return json({ error: 'Some business records have invalid fields.', fields: parsed.error.issues.slice(0, 8).map(i => `${i.path.join('.')}: ${i.message}`) }, 400);
   const { revision, action, detail } = parsed.data;

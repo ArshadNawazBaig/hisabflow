@@ -1,0 +1,34 @@
+.hf-install-button { display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:44px; border-radius:10px; padding:10px 13px; font-size:14px; font-weight:600; color:var(--text-secondary); }
+.hf-install-button:hover { background:var(--surface-subtle); }
+.account-popover > .hf-install-button { width:100%; justify-content:flex-start; }
+.hf-auth-install { margin-top:16px; border:1px solid var(--border-subtle); background:var(--paper); }
+.modal.hf-pwa-install-modal { width:500px; max-height:calc(var(--hf-modal-viewport-height,100dvh) - max(12px,env(safe-area-inset-top,0px)) - max(12px,env(safe-area-inset-bottom,0px))); }
+.modal-backdrop:has(> .hf-pwa-install-modal) { padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px)); z-index:1100; }
+.hf-pwa-install-modal .hf-modal-close { width:44px; height:44px; border-radius:12px; color:var(--text-secondary); background:var(--surface-subtle); }
+.hf-pwa-install-modal .hf-modal-footer { display:flex; justify-content:flex-end; }
+.hf-pwa-install-modal .button { min-height:44px; }
+.hf-install-intro { display:flex; align-items:center; gap:14px; margin-bottom:24px; }
+.hf-install-intro > span { display:grid; place-items:center; flex-shrink:0; width:48px; height:48px; border-radius:16px; color:var(--text-green); background:var(--status-green-bg); }
+.hf-install-intro p { font-size:14px; color:var(--text-secondary); line-height:1.7; }
+.hf-install-steps { display:grid; gap:22px; padding:0; margin:0; list-style:none; }
+.hf-install-steps li { display:flex; align-items:flex-start; gap:13px; }
+.hf-install-steps li > span { flex-shrink:0; display:grid; place-items:center; width:28px; height:28px; border:1px solid var(--border-subtle); border-radius:50%; color:var(--text-green); font-size:12px; font-weight:600; }
+.hf-install-steps li > div { min-width:0; }
+.hf-install-steps b { display:flex; align-items:center; flex-wrap:wrap; gap:7px; font-size:14px; line-height:1.6; color:var(--text-primary); }
+.hf-install-steps p { margin-top:5px; font-size:13px; line-height:1.75; color:var(--text-secondary); overflow-wrap:anywhere; }
+.hf-install-note { margin-top:24px; padding:13px 14px; background:var(--surface-subtle); border-radius:12px; color:var(--text-secondary); font-size:12px; line-height:1.7; }
+.hf-install-error { margin-bottom:20px; padding:12px; border-radius:10px; color:var(--status-red-text); background:var(--status-red-bg); font-size:13px; line-height:1.6; }
+.hf-pwa-notice { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:80; width:min(520px,calc(100vw - 32px)); display:flex; align-items:center; gap:12px; padding:12px 15px; color:var(--text-primary); background:var(--paper); border:1px solid var(--border-subtle); border-radius:16px; box-shadow:0 10px 40px #10281926; }
+.hf-pwa-notice > svg { flex-shrink:0; color:var(--text-secondary); }
+.hf-pwa-notice p { flex:1; min-width:0; font-size:13px; line-height:1.6; }
+.hf-pwa-notice p b,.hf-pwa-notice p span { display:block; }
+.hf-pwa-notice p span { color:var(--text-secondary); font-size:12px; }
+.hf-pwa-notice > button,.hf-pwa-notice > div > button:not(.button) { display:grid; place-items:center; min-width:44px; min-height:44px; border-radius:10px; color:var(--text-secondary); }
+.hf-pwa-notice > div { display:flex; align-items:center; gap:4px; }
+.hf-pwa-notice .button { min-height:44px; }
+@media (max-width:700px), (max-width:1100px) and (orientation:landscape) and (pointer:coarse) {
+  .hf-pwa-notice { bottom:calc(84px + env(safe-area-inset-bottom,0px)); }
+  .hf-pwa-update { flex-wrap:wrap; }
+  .hf-pwa-update > div { margin-left:auto; }
+  .hf-pwa-install-modal .hf-modal-header h2 { font-size:22px; }
+}

@@ -40,17 +40,67 @@ const headerKey = (source: string) => {
   if (/^(tid|transactionid|reference|ref|refno)$/.test(key)) return 'reference';
   return '';
 };
-const splitCells = (raw: string) => raw.includes('|') ? raw.split('|').map(value=>value.trim()) : raw.includes('\t') ? raw.split('\t').map(value=>value.trim()) : raw.trim().split(/\s{2,}/);
+function csvCells(raw: string) {
+  const cells: string[] = [];
+  let value = '', quoted = false, closed = false, valid = true;
+  for (let index = 0; index < raw.length; index++) {
+    const char = raw[index];
+    if (quoted) {
+      if (char !== '"') value += char;
+      else if (raw[index + 1] === '"') { value += '"'; index++; }
+      else { quoted = false; closed = true; }
+    } else if (char === ',') {
+      cells.push(value.trim()); value = ''; closed = false;
+    } else if (char === '"' && !value.trim() && !closed) { quoted = true; value = ''; }
+    else {
+      if (closed && char.trim()) valid = false;
+      value += char;
+    }
+  }
+  cells.push(value.trim());
+  return { cells, valid: valid && !quoted };
+}
+
+/** A quoted CSV field may contain newlines. Keep the complete original record as evidence. */
+function csvRecords(page: string): string[] {
+  const records: string[] = [];
+  let start = 0, quoted = false, fieldStart = true;
+  for (let index = 0; index < page.length; index++) {
+    const char = page[index];
+    if (char === '"' && quoted && page[index + 1] === '"') { index++; continue; }
+    if (char === '"' && (quoted || fieldStart)) { quoted = !quoted; fieldStart = false; }
+    else if (!quoted && char === ',') fieldStart = true;
+    else if (!quoted && (char === '\n' || char === '\r')) {
+      records.push(page.slice(start, index));
+      if (char === '\r' && page[index + 1] === '\n') index++;
+      start = index + 1; fieldStart = true;
+    } else if (char.trim()) fieldStart = false;
+  }
+  records.push(page.slice(start));
+  return records.filter(raw => raw.trim());
+}
+
+const splitCells = (raw: string): string[] => {
+  if (raw.includes('|')) return raw.split('|').map(value=>value.trim());
+  if (raw.includes('\t')) return raw.split('\t').map(value=>value.trim());
+  const csv = csvCells(raw);
+  // Only a recognized header selects CSV; commas in grouped money are not delimiters.
+  return csv.valid && tableHeader(csv.cells.map(headerKey)) ? csv.cells : raw.trim().split(/\s{2,}/);
+};
 const tableHeader = (keys: string[]) => new Set(keys.filter(Boolean)).size >= 4 && keys.some(key=>key==='date'||key==='description') && keys.some(key=>['goods','paid','balance'].includes(key));
-const balanceLabel = (raw: string) => {
-  const label = raw.replace(/\|/g,' ').trim();
+const balanceLabel = (raw: string, cells?: string[]) => {
+  const label = (cells?.find(value=>!blankCell(value)) || raw).replace(/\|/g,' ').trim();
   if (/^(?:opening\s+(?:balance|payable|receivable)|(?:balance\s+)?brought\s+forward|balance\s+b\s*\/\s*f)\b/i.test(label)) return 'opening';
   if (/^(?:closing\s+(?:balance|payable|receivable)|(?:balance\s+)?carried\s+forward|carry\s+forward|balance\s+c\s*\/\s*f|total\s+(?:payable|receivable))\b/i.test(label)) return 'closing';
   return '';
 };
-const sourceDecoration = (raw: string) => /^(?:ledger\s+(?:of|for)\b|(?:account\s+)?statement\s+(?:of|for)\b|page\s*\d+(?:\s+of\s+\d+)?\s*$)/i.test(raw.trim()) || /^(?:grand\s+)?totals?\s*$/i.test(splitCells(raw).find(value=>!blankCell(value)) || '') || !!balanceLabel(raw);
+const sourceDecoration = (raw: string, cells = splitCells(raw)) => /^(?:ledger\s+(?:of|for)\b|(?:account\s+)?statement\s+(?:of|for)\b|page\s*\d+(?:\s+of\s+\d+)?\s*$)/i.test(raw.trim()) || /^(?:grand\s+)?totals?\s*$/i.test(cells.find(value=>!blankCell(value)) || '') || !!balanceLabel(raw,cells);
 
 export function suggestedDate(raw: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw.trim())) {
+    const value = raw.trim(), date = new Date(`${value}T12:00:00Z`);
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value ? value : '';
+  }
   const match = raw.trim().match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4}|\d{2})$/);
   if (!match) return '';
   const day = +match[1], month = +match[2], year = match[3].length === 2 ? 2000 + +match[3] : +match[3];
@@ -63,11 +113,11 @@ function onlyBalance(values: Record<string,string>) {
   return !!cleanNumber(values.balance) && ['date','description','party','vehicle','reference'].every(key=>blankCell(values[key])) && ['weight','rate','goods','paid'].every(key=>blankCell(values[key]) || (!!cleanNumber(values[key]) && !nonzero(cleanNumber(values[key]))));
 }
 
-function makeRow(values: Record<string,string>, raw: string, page: number, sequence: number): SourceRow {
+function makeRow(values: Record<string,string>, raw: string, page: number, sequence: number, cells?: string[]): SourceRow {
   const date = blankCell(values.date) ? '' : values.date || '';
   const proposedDate = suggestedDate(date);
   const goods = cleanNumber(values.goods), paid = cleanNumber(values.paid);
-  const header = sourceDecoration(raw) || /^\d{1,2}$/.test(raw.trim());
+  const header = sourceDecoration(raw, cells) || /^\d{1,2}$/.test(raw.trim());
   const looksLikeTransaction = !!(date || !blankCell(values.vehicle) || cleanNumber(values.weight) || goods || paid) || (Object.values(values).some(value=>!blankCell(value)) && /\d/.test(raw));
   const kind = header || onlyBalance(values) || !looksLikeTransaction ? 'excluded' : goods && nonzero(goods) ? 'goods' : paid && nonzero(paid) ? 'payment' : 'goods';
   const issues: string[] = [];
@@ -99,10 +149,13 @@ function readDelimitedRows(text: string) {
   let columns: string[] = [];
   const rows: SourceRow[] = [];
   let sequence = 0;
+  let isCsv = false;
   const pages = text.split('\f');
   pages.forEach((page,pageIndex)=>{
-    for (const raw of page.split(/\r?\n/).filter(line=>line.trim())) {
-      const cells = splitCells(raw), found = cells.map(headerKey);
+    if (page.split(/\r?\n/).some(raw => !raw.includes('|') && !raw.includes('\t') && tableHeader(csvCells(raw).cells.map(headerKey)))) isCsv = true;
+    for (const raw of isCsv ? csvRecords(page) : page.split(/\r?\n/).filter(line=>line.trim())) {
+      const parsed = isCsv ? csvCells(raw) : { cells: splitCells(raw), valid: true };
+      const cells = parsed.cells, found = cells.map(headerKey);
       if (tableHeader(found)) {
         columns = found;
         rows.push(makeRow({},raw,pageIndex+1,++sequence));
@@ -110,7 +163,13 @@ function readDelimitedRows(text: string) {
       }
       const values: Record<string,string> = {};
       if (columns.length || cells.length >= 4) (columns.length?columns:headers).forEach((key,index)=>{ if(key) values[key]=cells[index] || ''; });
-      rows.push(makeRow(values,raw,pageIndex+1,++sequence));
+      const row = makeRow(values,raw,pageIndex+1,++sequence,cells);
+      if (!parsed.valid) {
+        row.kind = 'goods'; row.status = 'Needs review';
+        row.issues.push('Malformed CSV quoting — review the original record before approving it');
+      }
+      if (isCsv && columns.length && cells.length !== columns.length && row.kind !== 'excluded') row.issues.push('CSV column count differs from the header — review the original record');
+      rows.push(row);
     }
   });
   return { rows, columns:columns.filter(Boolean), pages:pages.length };
@@ -141,7 +200,8 @@ export function extractLedgerMetadata(text: string, sourceRows?: SourceRow[]): L
   metadata.unreadablePages=Array.from({length:pageCount},(_,index)=>index+1).filter(page=>!rows.some(row=>row.page===page && (row.kind!=='excluded'||!!row.balance)));
   const lastTransaction = rows.reduce((last,row)=>row.kind==='excluded'?last:row.sequence,0);
   for (const row of rows) {
-    const label = balanceLabel(row.raw);
+    const parsed = csvCells(row.raw);
+    const label = balanceLabel(row.raw,parsed.valid?parsed.cells:undefined);
     if (label==='opening') metadata.openingBalance=printedBalance(row) || metadata.openingBalance;
     if (label==='closing') metadata.closingBalance=printedBalance(row) || metadata.closingBalance;
   }

@@ -5,6 +5,7 @@ import { LogOut } from 'lucide-react';
 import './auth.css';
 
 export type WorkspaceUser = {
+  id: string;
   name: string;
   email: string;
   provider?: 'google';

@@ -28,6 +28,49 @@ test('sanitized transcription extracts source transactions and excludes headers/
   assert.equal(check.balanced,true);
   assert.equal(extraction.rows.filter(r=>r.kind==='excluded').length,2);
 });
+test('CSV keeps quoted commas, escaped quotes, multiline evidence and string references',()=>{
+  const source = '\uFEFFDATE,DESCRIPTIONS,PARTY,VEH. #,WEIGHT,RATE,TOTAL,PAID,PAYABLE,TID #\r\n2026-10-01,"Goods, \"\"reviewed\"\"\nfirst load","Example, Ltd",TEST-1,1.250,"1,000.00","1,250.00",,"1,250.00",0000123\r\n2026-10-02,Payment from Example Ltd,,,,,,250.00,"1,000.00",0000123\r\nClosing payable,,,,,,,,"1,000.00",';
+  const extraction=extractLedgerText(source), rows=extraction.rows.filter(row=>row.kind!=='excluded');
+  assert.equal(rows.length,2);
+  assert.equal(rows[0].description,'Goods, "reviewed"\nfirst load');
+  assert.equal(rows[0].party,'Example, Ltd');
+  assert.equal(rows[0].goods,'1250.00');assert.equal(rows[0].reference,'0000123');
+  assert.equal(rows[0].proposedDate,'2026-10-01');assert.equal(rows[0].effectiveDate,'');
+  assert.ok(rows[0].raw.includes('"Goods, ""reviewed""\nfirst load"'));
+  assert.equal(rows[1].page,1);assert.equal(rows[1].sequence,3);
+  assert.equal(reconcile(extraction.rows).balanced,true);
+  assert.equal(reconcile(extraction.rows).closing,'1000.00');
+  assert.equal(extraction.metadata.closingBalance.value,'1000.00');
+  assert.deepEqual(extraction.metadata.unreadablePages,[]);
+});
+test('CSV totals are excluded and malformed quoting or column counts remain for review',()=>{
+  const header='DATE,DESCRIPTIONS,TOTAL,PAID,BALANCE';
+  const extraction=extractLedgerText(header+'\n2026-10-01,Delivery,100.00,,100.00\nTOTAL,,100.00,,100.00');
+  assert.equal(extraction.rows.at(-1).kind,'excluded');assert.equal(reconcile(extraction.rows).goods,'100.00');
+  const extra=extractLedgerText(header+'\n2026-10-01,Delivery,1,000.00,,1000.00').rows.at(-1);
+  assert.ok(extra.issues.some(issue=>issue.includes('column count')));assert.equal(extra.status,'Needs review');
+  const malformed=extractLedgerText(header+'\n2026-10-01,"Unclosed delivery,100.00,,100.00').rows.at(-1);
+  assert.ok(malformed.issues.some(issue=>issue.includes('Malformed CSV quoting')));assert.equal(malformed.status,'Needs review');
+});
+test('fully quoted CSV opening and closing labels remain source evidence rather than transactions',()=>{
+  const csv = cells => cells.map(value=>`"${value.replaceAll('"','""')}"`).join(',');
+  const opening=csv(['Opening balance','','','','','','','','125.50','']);
+  const closing=csv(['','Closing balance','','','','','','','200.50','']);
+  const source=[csv(['DATE','DESCRIPTIONS','PARTY','VEH. #','WEIGHT','RATE','TOTAL','PAID','PAYABLE','TID #']),opening,
+    csv(['2026-10-01','QA goods','Example destination','QA-1','1.000','100.00','100.00','','225.50','0001']),
+    csv(['2026-10-02','QA payment','','','','','','25.00','200.50','0002']),closing].join('\n');
+  const extraction=extractLedgerText(source),active=extraction.rows.filter(row=>row.kind!=='excluded');
+  assert.equal(active.length,2);assert.equal(extraction.rows[1].status,'Excluded');assert.equal(extraction.rows.at(-1).status,'Excluded');
+  assert.equal(extraction.metadata.openingBalance.value,'125.50');assert.equal(extraction.metadata.closingBalance.value,'200.50');
+  assert.equal(extraction.metadata.openingBalance.raw,opening);assert.equal(extraction.metadata.closingBalance.raw,closing);
+  assert.equal(reconcile(extraction.rows,extraction.metadata.openingBalance.value).balanced,true);
+  assert.equal(reconcile(extraction.rows,extraction.metadata.openingBalance.value).closing,'200.50');
+});
+test('ISO source dates are validated without calendar rollover',()=>{
+  assert.equal(suggestedDate('2026-10-01'),'2026-10-01');
+  assert.equal(suggestedDate('2024-02-29'),'2024-02-29');
+  assert.equal(suggestedDate('2026-02-29'),'');assert.equal(suggestedDate('2026-04-31'),'');
+});
 test('raw malformed dates remain unresolved and out-of-order rows remain in printed order',()=>{
   assert.equal(suggestedDate('22/07/026'),''); assert.equal(suggestedDate('15/0826'),''); assert.equal(suggestedDate('31-02-2026'),'');
   const extraction=extractLedgerText(SAMPLE_LEDGER), anomaly=extraction.rows.find(r=>r.rawDate==='14/10/026');

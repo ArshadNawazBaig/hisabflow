@@ -83,7 +83,7 @@
   .auth-story-copy { max-width: 310px; }
   .auth-story-eyebrow { font-size: 12px; letter-spacing: 1.15px; }
 }
-@media (max-width: 820px) {
+@media (max-width:820px), (max-width:1100px) and (orientation:landscape) and (pointer:coarse) {
   .auth-page { display: block; }
   .auth-entry { min-height: 100svh; }
   .auth-story { display: none; }
@@ -103,4 +103,15 @@
   .auth-page-account-link { font-size: 13px; }
   .auth-page-footer { padding: 22px 26px; font-size: 12px; }
   .auth-page-footer-mark { display: none; }
+}
+
+@media (max-width:820px), (max-width:1100px) and (orientation:landscape) and (pointer:coarse) {
+  .auth-page .auth-page-header > p a,.auth-page .auth-page-account-link a,.auth-page .auth-page-brand,.auth-page .auth-page-error .auth-reset-form button { min-height:44px; min-width:44px; align-items:center; }
+  .auth-page-header { padding-top:max(23px,env(safe-area-inset-top,0px)); }
+  .auth-page-footer { padding-bottom:max(22px,env(safe-area-inset-bottom,0px)); }
+}
+
+@media (max-height:450px) and (pointer:coarse) {
+  .auth-page-header { padding-block:16px; }
+  .auth-entry-content { padding-top:28px; padding-bottom:36px; }
 }

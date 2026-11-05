@@ -46,6 +46,16 @@ test('a clean supplier statement creates one company and posts its goods and ban
   assert.deepEqual(result.workspace.imports[0].rows.map(row=>[row.id,row.page,row.sequence,row.raw,row.rawDate]),source.rows.map(row=>[row.id,row.page,row.sequence,row.raw,row.rawDate]));
   validPosting(result,previous);
 });
+test('a reviewed CSV with ISO dates posts through the same accounting validation as PDF text',()=>{
+  const source='DATE,DESCRIPTIONS,PARTY,VEH. #,WEIGHT,RATE,TOTAL,PAID,PAYABLE,TID #\n2026-10-01,"Material delivery, first load","Example destination, East",TEST-CSV,10.000,100.00,"1,000.00",,"1,000.00",00001\n2026-10-02,F/T to Example Metals UBL account,,,,,,200.00,800.00,00002\nClosing balance,,,,,,,,800.00,';
+  const previous=workspace(),plan=prepare(draft(source,'CSV-A'),previous),result=commit([plan],previous);
+  assert.deepEqual(plan.blockers,[]);assert.deepEqual(result.postedIds,['CSV-A']);
+  assert.equal(result.workspace.shipments[0].date,'2026-10-01');
+  assert.equal(result.workspace.shipments[0].deliveryParty,'Example destination, East');
+  assert.equal(result.workspace.payments[0].reference,'00002');
+  assert.equal(result.workspace.companies[0].balance,'-800.00');
+  validPosting(result,previous);
+});
 
 test('a customer statement posts sales and receipts while leaving purchase costs unresolved',()=>{
   const previous=workspace(),name='Example Customer';

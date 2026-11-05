@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { InstallAppButton } from './pwa-support';
 import { ArrowRight, ArrowUpRight, Building2, Check, CircleAlert, ShieldCheck, Truck, Wallet } from 'lucide-react';
 import { GoogleAuthForm, GoogleMark, SignOutForm } from './auth-controls';
 import './auth-page.css';
@@ -38,7 +39,7 @@ export function AuthPage({ mode, error, resetRequired = false, googleConfigured 
         </div>
 
         <p className="auth-page-account-link">{signup ? 'Already have a workspace?' : 'Starting something new?'} <a href={signup ? '/login' : '/signup'}>{signup ? 'Sign in' : 'Create an account'}<ArrowRight size={14}/></a></p>
-        <div className="auth-page-assurance"><span><ShieldCheck size={17}/></span><p>{signup ? 'Your business records start with you.' : 'A private space for your business.'}<small>Secure sign-in with your Google account.</small></p></div>
+        <InstallAppButton className="hf-auth-install"/><div className="auth-page-assurance"><span><ShieldCheck size={17}/></span><p>{signup ? 'Your business records start with you.' : 'A private space for your business.'}<small>Secure sign-in with your Google account.</small></p></div>
       </div>
 
       <footer className="auth-page-footer"><span>Clarity in every entry.</span><span className="auth-page-footer-mark">Made for your everyday business<span>✳</span></span></footer>

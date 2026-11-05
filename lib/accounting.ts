@@ -69,7 +69,11 @@ function approvedDate(value: string): boolean {
 }
 function fingerprint(row: SourceRow): string {
   // Amount alone and transaction reference alone are intentionally insufficient.
-  return [row.effectiveDate, row.description.trim().toLowerCase(), row.party.trim().toLowerCase(), row.vehicle.trim().toLowerCase(), row.weight, row.goods || '0', row.paid || '0', row.reference].join('|');
+  const canonicalText = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
+  const canonicalNumber = (value: string, places: number) => {
+    try { return scaled(value || '0', places).toString(); } catch { return value.trim(); }
+  };
+  return JSON.stringify([row.effectiveDate, canonicalText(row.description), canonicalText(row.party), canonicalText(row.vehicle), canonicalNumber(row.weight, 6), canonicalNumber(row.goods, 2), canonicalNumber(row.paid, 2), row.reference.trim()]);
 }
 function positive(value: string): boolean {
   try { return compare(value || '0', '0') > 0; } catch { return false; }
@@ -105,6 +109,7 @@ export function validateImport(batch: ImportBatch, workspace: Workspace): string
   if (m.mode === 'Transactions' && active.some(row => approvedDate(row.effectiveDate) && openingCutoffs.some(cutoff => row.effectiveDate <= cutoff))) errors.push('These transactions overlap an already posted opening-balance cutoff. Import only subsequent activity.');
   if (m.mode === 'Opening balance') {
     if (!approvedDate(m.cutoff)) errors.push('Choose an agreed opening balance cutoff date.');
+    if (approvedDate(m.cutoff) && active.some(row => approvedDate(row.effectiveDate) && row.effectiveDate > m.cutoff)) errors.push('Opening-balance source activity must be on or before the reviewed cutoff date.');
     if (prior.length || workspace.shipments.some(s => s.companyId === m.counterpartyId) || workspace.payments.some(p => p.companyId === m.counterpartyId)) errors.push('An opening balance cannot be added over existing counterparty history.');
   }
   for (const row of active) {
@@ -112,6 +117,7 @@ export function validateImport(batch: ImportBatch, workspace: Workspace): string
     if (row.status !== 'Approved' || !row.reviewer || !row.reviewedAt || !Number.isFinite(Date.parse(row.reviewedAt))) errors.push(`${label}: finish and sign off the review.`);
     if (!approvedDate(row.effectiveDate)) errors.push(`${label}: approve a valid effective date.`);
     if (!validMoney(row.goods || '0') || !validMoney(row.paid || '0') || !validMoney(row.balance, true)) errors.push(`${label}: source amounts and running balance must be valid decimals.`);
+    if (!positive(row.goods) && !positive(row.paid)) errors.push(`${label}: a transaction requires a positive goods or payment amount; exclude non-transaction rows.`);
     if (!row.raw || !row.page || !row.sequence) errors.push(`${label}: source page, row and raw evidence are required.`);
     if (priorRows.has(fingerprint(row))) errors.push(`${label}: potential overlap with a posted statement; resolve it before importing.`);
     if (positive(row.paid)) {
@@ -123,6 +129,11 @@ export function validateImport(batch: ImportBatch, workspace: Workspace): string
       const allocatedCompany = workspace.companies.find(c => c.id === row.companyId);
       if (row.treatment === 'Customer receipt' && (m.direction !== 'Dispatch' || allocatedCompany?.role === 'Supplier')) errors.push(`${label}: customer receipt treatment requires an incoming receipt allocated to a customer.`);
       if (['Supplier settlement','Supplier-agreed deduction'].includes(row.treatment || '') && (m.direction !== 'Receipt' || allocatedCompany?.role === 'Customer')) errors.push(`${label}: supplier settlement treatment requires an outgoing payment allocated to a supplier.`);
+      if (row.treatment === 'Payment on behalf' && allocatedCompany && ((m.direction === 'Receipt' && allocatedCompany.role === 'Customer') || (m.direction === 'Dispatch' && allocatedCompany.role === 'Supplier'))) errors.push(`${label}: review the company role and direction of this third-party settlement.`);
+    }
+    if (positive(row.goods)) {
+      if (row.weight && !/^\d{1,12}(?:\.\d{1,6})?$/.test(row.weight)) errors.push(`${label}: weight must be a nonnegative decimal with up to six decimal places.`);
+      if ((row.weight || row.rate) && !validMoney(row.rate)) errors.push(`${label}: enter a valid nonnegative source rate.`);
     }
     if (row.weight && row.rate && positive(row.goods)) {
       try { if (compare(multiply(row.weight, row.rate), row.goods) !== 0) errors.push(`${label}: weight × rate does not match the source goods amount.`); }
@@ -295,6 +306,21 @@ export function companyDeletionReason(workspace: Workspace, companyId: string): 
   return companyLinkDeletionReason(workspace, companyId);
 }
 
+function importLinkDeletionReason(workspace: Workspace, importId: string, postedRecordIds: string[] = []): string | null {
+  if (workspace.shipments.some(shipment => shipment.sourceRef === importId)) return 'This statement has linked delivery records. Keep it for source history.';
+  if (workspace.payments.some(payment => payment.sourceRef === importId)) return 'This statement has linked payment records. Keep it for source history.';
+  if (postedRecordIds.length) return 'This statement retains accounting record links. Keep it for source history.';
+  return null;
+}
+
+/** Only unposted statements without accounting links can be deleted. */
+export function importDeletionReason(workspace: Workspace, importId: string): string | null {
+  const source = workspace.imports.find(candidate => candidate.id === importId);
+  if (!source) return 'This statement no longer exists.';
+  if (source.status === 'Posted') return 'Posted statements cannot be deleted. Keep them for accounting history.';
+  return importLinkDeletionReason(workspace, importId, source.postedRecordIds);
+}
+
 /** Validate manual financial records as well as changes derived from source imports. */
 export function validateWorkspaceRecords(incoming: Workspace, previous: Workspace | null = null): string[] {
   const errors: string[] = [];
@@ -305,6 +331,13 @@ export function validateWorkspaceRecords(incoming: Workspace, previous: Workspac
     // turn an existing account with financial history into an unused company.
     const reason = companyDeletionReason(previous!, company.id) || companyLinkDeletionReason(incoming, company.id);
     if (reason) errors.push(`${company.name}: ${reason}`);
+  }
+  for (const source of previous?.imports ?? []) {
+    if (source.status !== 'Draft' || incoming.imports.some(candidate => candidate.id === source.id)) continue;
+    // Clearing records in this same request cannot erase their retained evidence.
+    // Also reject new records which would point at the draft being removed.
+    const reason = importDeletionReason(previous!, source.id) || importLinkDeletionReason(incoming, source.id, source.postedRecordIds);
+    if (reason) errors.push(`${source.name}: ${reason}`);
   }
   errors.push(...reviewCostAllocations(incoming).errors);
   const companies = new Map(incoming.companies.map(c => [c.id, c]));

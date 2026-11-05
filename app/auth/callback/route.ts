@@ -1,14 +1,14 @@
 import { env } from 'cloudflare:workers';
 import { cookies } from 'next/headers';
 import { AuthIdentityError } from '@/lib/server/auth-identities';
-import { createAuthClient, identityStore, authCookieOptions, authRedirect, clearGoogleCookies, sha256, WorkspaceAuthError } from '@/lib/server/auth';
+import { createAuthClient, identityStore, authCookieOptions, authRedirect, clearGoogleCookies, sha256, WorkspaceAuthError, localAuthAllowed } from '@/lib/server/auth';
 import { AUTH_FLOW_COOKIE, AUTH_PROVIDER_COOKIE, approvedAppOrigin, assertCallbackOwner, checkedGoogleIdentity } from '@/lib/server/auth-policy';
 
 export const dynamic='force-dynamic';
 export async function GET(request: Request) {
   let exchanged=false;
   try {
-    approvedAppOrigin(request,import.meta.env.DEV,env.HISABFLOW_APP_ORIGIN);
+    approvedAppOrigin(request,localAuthAllowed(),env.HISABFLOW_APP_ORIGIN);
     const url=new URL(request.url),jar=await cookies();
     const nonce=jar.get(AUTH_FLOW_COOKIE)?.value;
     if (!nonce || !/^[0-9a-f]{64}$/.test(nonce)) throw new WorkspaceAuthError('expired');

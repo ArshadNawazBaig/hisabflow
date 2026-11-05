@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState, type AriaAttributes, type ReactNode, type RefObject } from 'react';
+import { useEffect, useId, useRef, useState, type AriaAttributes, type ReactNode, type RefObject } from 'react';
 import { Select } from '@base-ui/react/select';
 import { Popover } from '@base-ui/react/popover';
 import { DayPicker } from 'react-day-picker';
-import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatISODate, isDateAllowed, parseISODate } from '@/lib/control-dates';
 import { today as businessToday } from '@/lib/types';
 import './controls.css';
@@ -67,8 +67,8 @@ export function AppSelect({ options, leadingIcon, value, defaultValue, onValueCh
   const [container, setContainer] = useState<HTMLElement>();
   const selected = options.find(option => option.value === current);
   const errorId = `${controlId}-error`;
-  const description = [aria['aria-describedby'], invalid ? errorId : undefined].filter(Boolean).join(' ') || undefined;
-  useEffect(() => { if (current) setInvalid(false); }, [current]);
+  const showInvalid=invalid&&!current;
+  const description = [aria['aria-describedby'], showInvalid ? errorId : undefined].filter(Boolean).join(' ') || undefined;
   useEffect(() => {
     const form = rootRef.current?.closest('form');
     const reset = () => setInvalid(false);
@@ -82,7 +82,7 @@ export function AppSelect({ options, leadingIcon, value, defaultValue, onValueCh
     <Select.Root<string> id={controlId} name={name} required={required} disabled={disabled} value={current} items={options} modal={false}
       onOpenChange={open => { if (open) setContainer(popupParent(rootRef.current)); }}
       onValueChange={next => { change(next ?? ''); setInvalid(false); }}>
-      <Select.Trigger ref={triggerRef} id={controlId} type="button" className={`button hf-control-trigger hf-select-trigger ${className}`} {...aria} aria-describedby={description} aria-invalid={invalid || aria['aria-invalid'] || undefined} aria-required={required || undefined} data-empty={!current || undefined}>
+      <Select.Trigger ref={triggerRef} id={controlId} type="button" className={`button hf-control-trigger hf-select-trigger ${className}`} {...aria} aria-describedby={description} aria-invalid={showInvalid || aria['aria-invalid'] || undefined} aria-required={required || undefined} data-empty={!current || undefined}>
         {leadingIcon && <span className="hf-control-leading" aria-hidden="true">{leadingIcon}</span>}
         <Select.Value className="hf-control-value">{selected?.label ?? placeholder}</Select.Value>
         <Select.Icon className="hf-control-icon"><ChevronDown size={16}/></Select.Icon>
@@ -101,7 +101,7 @@ export function AppSelect({ options, leadingIcon, value, defaultValue, onValueCh
         </Select.Positioner>
       </Select.Portal>
     </Select.Root>
-    {invalid && <span id={errorId} className="hf-control-error" role="alert">Choose an option to continue.</span>}
+    {showInvalid && <span id={errorId} className="hf-control-error" role="alert">Choose an option to continue.</span>}
   </span>;
 }
 
@@ -127,12 +127,13 @@ export function AppDatePicker({ value, defaultValue = '', onValueChange, id, nam
   const [container, setContainer] = useState<HTMLElement>();
   const [invalid, setInvalid] = useState(false);
   const errorId = `${controlId}-error`;
-  const description = [aria['aria-describedby'], invalid ? errorId : undefined].filter(Boolean).join(' ') || undefined;
+  const showInvalid=invalid&&(!current||!isDateAllowed(current,min,max));
+  const description = [aria['aria-describedby'], showInvalid ? errorId : undefined].filter(Boolean).join(' ') || undefined;
   const startYear = lower?.getFullYear() ?? Math.max(1, Math.min(1900, selected?.getFullYear() ?? upper?.getFullYear() ?? 1900));
   const endYear = upper?.getFullYear() ?? Math.min(9999, Math.max(today.getFullYear() + 20, startYear + 20, selected?.getFullYear() ?? 0));
   const calendarStart = parseISODate(`${String(startYear).padStart(4, '0')}-01-01`)!;
   const calendarEnd = parseISODate(`${String(endYear).padStart(4, '0')}-12-31`)!;
-  const years = useMemo(() => Array.from({ length: Math.max(0, endYear - startYear + 1) }, (_, index) => ({ value: String(startYear + index), label: String(startYear + index) })), [startYear, endYear]);
+  const years = Array.from({ length: Math.max(0, endYear - startYear + 1) }, (_, index) => ({ value: String(startYear + index), label: String(startYear + index) }));
   const monthOptions = monthLabels.map((label, index) => ({ value: String(index), label, disabled: !!(lower && month.getFullYear() === lower.getFullYear() && index < lower.getMonth() || upper && month.getFullYear() === upper.getFullYear() && index > upper.getMonth()) }));
   const dateAllowed = (date: Date) => isDateAllowed(formatISODate(date), min, max);
   const previousDisabled = shiftMonth(month, -1) < firstOfMonth(lower || calendarStart);
@@ -150,7 +151,6 @@ export function AppDatePicker({ value, defaultValue = '', onValueChange, id, nam
   useEffect(() => {
     const invalidDate = !!current && !isDateAllowed(current, min, max);
     inputRef.current?.setCustomValidity(invalidDate ? 'Choose a valid date within the allowed range.' : '');
-    if (!invalidDate && current) setInvalid(false);
   }, [current, min, max]);
   useEffect(() => {
     const form = rootRef.current?.closest('form');
@@ -165,14 +165,13 @@ export function AppDatePicker({ value, defaultValue = '', onValueChange, id, nam
       if (next) { setContainer(popupParent(rootRef.current)); setVisibleMonth(selected || today); }
       setOpen(next);
     }}>
-      <Popover.Trigger ref={triggerRef} id={controlId} type="button" disabled={disabled} className={`button hf-control-trigger hf-date-trigger ${className}`} {...aria} aria-describedby={description} aria-invalid={invalid || aria['aria-invalid'] || undefined} aria-required={required || undefined} data-empty={!selected || undefined}>
+      <Popover.Trigger ref={triggerRef} id={controlId} type="button" disabled={disabled} className={`button hf-control-trigger hf-date-trigger ${className}`} {...aria} aria-describedby={description} aria-invalid={showInvalid || aria['aria-invalid'] || undefined} aria-required={required || undefined} data-empty={!selected || undefined}>
         <CalendarDays size={17} className="hf-date-leading"/><span className="hf-control-value">{selected ? displayDate(selected) : current || placeholder}</span><ChevronDown size={15} className="hf-control-icon"/>
       </Popover.Trigger>
       <Popover.Portal container={container}>
         <Popover.Positioner sideOffset={7} align="start" positionMethod="fixed" sticky collisionPadding={10} className="hf-date-positioner">
           <Popover.Popup ref={popupRef} data-hf-popup="date" className="hf-calendar-popup" finalFocus={triggerRef} initialFocus={() => popupRef.current?.querySelector<HTMLElement>('[role="grid"] button[tabindex="0"]') || true} onKeyDown={event => { if (event.key === 'Escape') event.stopPropagation(); }}>
             <Popover.Title className="hf-visually-hidden">Choose a date</Popover.Title>
-            <Popover.Close className="button hf-calendar-close" aria-label="Close calendar"><X size={16}/></Popover.Close>
             <div className="hf-calendar-heading">
               <button type="button" className="button hf-calendar-nav" aria-label="Previous month" disabled={previousDisabled} onClick={() => setVisibleMonth(shiftMonth(month, -1))}><ChevronLeft size={18}/></button>
               <div className="hf-calendar-month-year">
@@ -186,7 +185,7 @@ export function AppDatePicker({ value, defaultValue = '', onValueChange, id, nam
               disabled={[...(lower ? [{ before: lower }] : []), ...(upper ? [{ after: upper }] : [])]}
               className="hf-calendar" components={{ MonthCaption: () => <></> }}
               classNames={{ months: 'hf-calendar-months', month: 'hf-calendar-month', month_grid: 'hf-calendar-grid', weekdays: 'hf-calendar-weekdays', weekday: 'hf-calendar-weekday', week: 'hf-calendar-week', day: 'hf-calendar-day', day_button: 'hf-calendar-day-button', selected: 'hf-calendar-selected', today: 'hf-calendar-today', outside: 'hf-calendar-outside', disabled: 'hf-calendar-disabled', hidden: 'hf-calendar-hidden' }}/>
-            <div className="hf-calendar-footer"><button type="button" className="button hf-calendar-today-action" disabled={!dateAllowed(today)} onClick={() => choose(today)}>Today</button><button type="button" className="button hf-calendar-clear" disabled={!current} onClick={() => choose(undefined)}>Clear date</button></div>
+            <div className="hf-calendar-footer"><button type="button" className="button hf-calendar-today-action" disabled={!dateAllowed(today)} onClick={() => choose(today)}>Today</button><button type="button" className="button hf-calendar-clear" disabled={!current} onClick={() => choose(undefined)}>Clear date</button><Popover.Close className="button hf-calendar-dismiss" aria-label="Close calendar">Done</Popover.Close></div>
           </Popover.Popup>
         </Popover.Positioner>
       </Popover.Portal>
@@ -195,6 +194,6 @@ export function AppDatePicker({ value, defaultValue = '', onValueChange, id, nam
       onChange={event => { if (isDateAllowed(event.currentTarget.value, min, max) || !event.currentTarget.value) change(event.currentTarget.value); }}
       onFocus={() => triggerRef.current?.focus()}
       onInvalid={event => { event.preventDefault(); setInvalid(true); triggerRef.current?.focus(); }}/>
-    {invalid && <span id={errorId} className="hf-control-error" role="alert">{current ? 'Choose a valid date within the allowed range.' : 'Choose a date to continue.'}</span>}
+    {showInvalid && <span id={errorId} className="hf-control-error" role="alert">{current ? 'Choose a valid date within the allowed range.' : 'Choose a date to continue.'}</span>}
   </span>;
 }

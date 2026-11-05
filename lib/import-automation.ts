@@ -150,7 +150,7 @@ export function commitAutomaticImports(plans: AutomaticImportPlan[], workspace: 
     const plan = prepareAutomaticImport(original.batch, next, original.choices, reviewer);
     if (!plan.company || !plan.choices.relationship || !plan.choices.companyName || !plan.batch.fileKey || !/^[a-f\d]{64}$/i.test(plan.batch.hash)) throw new Error('Confirm a company relationship and retain each original PDF before importing.');
     if (plan.newCompany) { next.companies.push(plan.newCompany); newCompanyIds.push(plan.newCompany.id); }
-    let batch = structuredClone(plan.batch);
+    const batch = structuredClone(plan.batch);
     batch.mapping.unitsConfirmed = true;
     batch.rows = batch.rows.map(row => row.status === 'Approved' ? { ...row, reviewer, reviewedAt: now } : row);
     if (!plan.reviewRows.length && !plan.blockers.length) {

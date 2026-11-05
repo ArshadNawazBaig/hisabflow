@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     ".sites-runtime/**",
     "outputs/**",
     "work/**",
+    // Upstream PDF.js worker: generated third-party code, not application source.
+    "public/pdf.worker.min.mjs",
   ]),
   {
     files: ["components/ui/**/*.{ts,tsx}", "hooks/use-mobile.ts"],

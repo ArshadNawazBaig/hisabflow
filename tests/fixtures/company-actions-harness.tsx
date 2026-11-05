@@ -23,11 +23,12 @@ const initialWorkspace: Workspace = {
 };
 
 type SaveRequest = { data: Workspace; revision: number; action: string; detail: string };
-let stored = structuredClone(initialWorkspace), revision = 1;
+let stored = structuredClone(initialWorkspace), revision = 1, activeOwner='QA-OWNER';
 const requests: SaveRequest[] = [];
 const waiting: { request: SaveRequest; resolve: (response: Response) => void }[] = [];
 const qa = {
   requests,
+  setOwner(id:string){activeOwner=id},
   get pendingCount() { return waiting.length; },
   snapshot: () => structuredClone(stored),
   releaseSave(status = 200) {
@@ -48,9 +49,10 @@ window.fetch = async (input, init) => {
   if (init?.method === 'PUT') {
     const request = JSON.parse(String(init.body)) as SaveRequest;
     requests.push(structuredClone(request));
+    if(new Headers(init?.headers).get('X-Workspace-Owner')!==encodeURIComponent(activeOwner))return Response.json({error:'Workspace account changed.',code:'WORKSPACE_ACCOUNT_CHANGED'},{status:409});
     return new Promise<Response>(resolve => waiting.push({ request, resolve }));
   }
-  return Response.json({ data: structuredClone(stored), revision, storage: 'isolated-test', user: { name: 'QA owner', email: 'qa-owner@example.invalid', provider: 'google' } });
+  return Response.json({ data: structuredClone(stored), revision, storage: 'isolated-test', user: { id:activeOwner, name: 'QA owner', email: 'qa-owner@example.invalid', provider: 'google' } });
 };
 
 createRoot(document.getElementById('root')!).render(<HisabApp/>);

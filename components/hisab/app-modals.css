@@ -1,0 +1,18 @@
+.hf-modal.hf-app-modal { width: 520px; }
+.hf-modal-title-with-icon { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.hf-modal-title-with-icon > div { min-width: 0; overflow-wrap: anywhere; }
+.hf-modal-title-with-icon .dialog-symbol { flex-shrink: 0; margin: 0; width: 44px; height: 44px; border-radius: 14px; }
+.hf-modal-title-with-icon .overline { display: block; margin-bottom: 5px; }
+.hf-app-modal .getting-started { margin: 0; }
+.hf-modal.search-modal { width: 620px; }
+.hf-modal.search-modal .command-search { padding: 0; border: 0; width: 100%; min-width: 0; gap: 10px; }
+.hf-modal.search-modal .command-search input { width:0; min-height:44px; font-size:16px; }
+.hf-modal.search-modal .hf-modal-body { padding: 0; }
+
+@media (max-width: 700px) {
+  .hf-modal-title-with-icon { align-items: flex-start; gap: 10px; }
+  .hf-modal-title-with-icon .dialog-symbol { width: 34px; height: 34px; border-radius: 11px; }
+  .hf-modal-title-with-icon .dialog-symbol svg { width: 19px; height: 19px; }
+  .hf-app-modal .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .hf-modal.search-modal .command-search kbd { display: none; }
+}

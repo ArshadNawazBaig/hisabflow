@@ -19,7 +19,7 @@ window.fetch=async(input,init)=>{
   const url=new URL(input instanceof Request?input.url:String(input),location.origin);
   if(url.pathname!=='/api/workspace')return nativeFetch(input,init);
   if(init?.method==='PUT'){stored=JSON.parse(String(init.body)).data;revision++;return Response.json({data:stored,revision});}
-  return Response.json({data:stored,revision,storage:'isolated-test',user:{name:'QA owner',email:'qa@example.invalid',provider:'google'}});
+  return Response.json({data:stored,revision,storage:'isolated-test',user:{id:'QA-OWNER',name:'QA owner',email:'qa@example.invalid',provider:'google'}});
 };
 
 function ControlLab(){

@@ -1,3 +1,4 @@
+import { browserLaunchOptions } from './browser-support.mjs';
 import { build } from 'esbuild';
 import { chromium } from '@playwright/test';
 import { createServer } from 'node:http';
@@ -18,7 +19,7 @@ const server=createServer(async(request,response)=>{
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const base=`http://127.0.0.1:${server.address().port}`;
-const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+const browser=await chromium.launch(browserLaunchOptions());
 let failurePage;
 try{
   const context=await browser.newContext({viewport:{width:1280,height:900},timezoneId:'Asia/Karachi'}),page=await context.newPage(),errors=[];
@@ -104,7 +105,7 @@ try{
   assert.equal(await page.locator('select:visible,input[type="date"]:visible,input[list]:visible').count(),0);
   await page.screenshot({path:'outputs/custom-controls-import.png',animations:'disabled'});
   await navigate('Companies');
-  await page.locator('.rv-table tbody tr').filter({hasText:'QA Customer'}).click();
+  const customer=page.locator('.rv-table tbody tr:visible,.rv-record-card:visible').filter({hasText:'QA Customer'});if(await customer.locator('button').filter({hasText:'View details'}).count())await customer.getByRole('button',{name:'View details',exact:true}).click();else await customer.click();
   await modal.getByRole('button',{name:'Review statement',exact:true}).click();
   await page.locator('.import-document-heading h2').filter({hasText:'QA control statement.pdf'}).waitFor();
   assert.deepEqual(errors,[]);

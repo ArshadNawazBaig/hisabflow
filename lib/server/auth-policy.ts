@@ -37,6 +37,11 @@ export function checkedProductionOrigin(value?: string): string {
   } catch {throw new WorkspaceAuthError('configuration');}
 }
 
+/** Only the local launcher may set this binding; request headers never enable it. */
+export function allowLocalAuthentication(development: boolean, localRuntime?: unknown): boolean {
+  return development || localRuntime === '1';
+}
+
 export function approvedAppOrigin(request: Request, allowLocalhost: boolean, configuredOrigin?: string): string {
   let url: URL;
   try { url = new URL(request.url); } catch { throw new WorkspaceAuthError('origin'); }

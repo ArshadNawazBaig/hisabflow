@@ -7,3 +7,4 @@
 .hf-record-action[data-highlighted]{background:var(--surface-subtle)}
 .hf-record-action-delete{color:var(--text-red);border-top:1px solid var(--border-subtle);border-top-left-radius:0;border-top-right-radius:0;margin-top:4px}
 .hf-record-action-delete[data-highlighted]{background:var(--status-red-bg)}
+@media (max-width:700px),(pointer:coarse){.hf-record-actions-trigger{width:44px;height:44px}}

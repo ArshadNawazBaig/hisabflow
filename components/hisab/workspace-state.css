@@ -59,3 +59,14 @@
 @media (prefers-reduced-motion: reduce) {
   .workspace-state .spin { animation: none; }
 }
+
+.workspace-save-error {display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;margin-bottom:22px;border:1px solid var(--border-subtle);border-radius:12px;background:var(--status-red-bg);color:var(--status-red-text);font-size:13px;line-height:1.65;}
+.workspace-save-error > svg {flex-shrink:0;}
+.workspace-save-error > p {flex:1;min-width:min(220px,100%);margin:0;overflow-wrap:anywhere;}
+.workspace-save-error .button {white-space:nowrap;}
+button.save-status {background:transparent;border:0;font:inherit;cursor:pointer;}
+button.save-status:disabled {opacity:1;cursor:default;}
+
+@media (max-width:700px), (max-width:1100px) and (orientation:landscape) and (pointer:coarse) {
+  .workspace-state-actions .button,.workspace-state-actions .auth-signout-form button,.workspace-onboarding > .auth-signout-form button { min-height:44px; }
+}

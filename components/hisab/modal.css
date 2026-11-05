@@ -1,0 +1,53 @@
+.modal-backdrop.rv-overlay { inset:var(--hf-modal-viewport-top,0px) 0 auto; height:var(--hf-modal-viewport-height,100dvh); overflow:hidden; }
+.modal.hf-modal {
+  --hf-modal-padding: 28px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: calc(var(--hf-modal-viewport-height,100dvh) - 48px);
+  padding: 0;
+  overflow: hidden;
+}
+
+.hf-modal .hf-modal-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0;
+  padding: 24px var(--hf-modal-padding);
+  border-bottom: 1px solid var(--border-subtle, #edf0e7);
+  background: var(--paper);
+}
+
+.hf-modal-header-content { min-width: 0; flex: 1; }
+.hf-modal-close { flex-shrink: 0; }
+.hf-modal .hf-modal-form { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; margin: 0; overflow: hidden; }
+.hf-modal-body { flex: 1 1 auto; min-height: 0; padding: 24px var(--hf-modal-padding); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.hf-modal-footer { flex: 0 0 auto; padding: 20px var(--hf-modal-padding); border-top: 1px solid var(--border-subtle, #edf0e7); background: var(--paper); }
+.hf-modal-footer > .form-actions, .hf-modal-footer > .rv-form-actions { margin: 0; padding: 0; border: 0; }
+.hf-modal-body > :last-child { margin-bottom: 0; }
+
+@media (max-width: 700px) {
+  .modal.hf-modal { --hf-modal-padding: 21px; max-height: calc(var(--hf-modal-viewport-height,100dvh) - 24px); }
+  .hf-modal .hf-modal-header { padding-block: 20px; }
+  .hf-modal-body { padding-block: 20px; }
+  .hf-modal-footer { padding-block: 16px; }
+}
+@media (max-width: 700px), (pointer: coarse) {
+  .hf-modal-footer .form-actions > .button,.hf-modal-footer .rv-form-actions > .button { font-size:14px; padding-inline:12px; }
+  .hf-modal .hf-modal-close { width:44px; height:44px; border-radius:12px; color:var(--text-secondary); background:var(--surface-subtle); border-color:var(--border-subtle); }
+}
+.modal-backdrop[data-compact-viewport] .hf-modal-header { padding-block:12px; }
+.modal-backdrop[data-compact-viewport] .hf-modal-header h2 { font-size:20px; line-height:1.3; margin-bottom:5px; }
+.modal-backdrop[data-compact-viewport] .hf-modal-header p { font-size:12px; line-height:1.5; }
+.modal-backdrop[data-compact-viewport] .hf-modal-body { padding-block:14px; }
+.modal-backdrop[data-compact-viewport] .hf-modal-footer { padding-block:12px; }
+@media (max-height: 450px) {
+  .hf-modal .hf-modal-header { padding-block:12px; }
+  .hf-modal .hf-modal-header h2 { font-size:20px; line-height:1.3; margin-bottom:5px; }
+  .hf-modal .hf-modal-header p { font-size:12px; line-height:1.5; }
+  .hf-modal-body { padding-block:14px; }
+  .hf-modal-footer { padding-block:12px; }
+}

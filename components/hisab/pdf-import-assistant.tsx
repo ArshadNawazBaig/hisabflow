@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, Check, FileText, Loader2, Upload, X } from 'lucide-react';
 import { createAutomaticDraft, prepareAutomaticImport, commitAutomaticImports } from '@/lib/import-automation';
 import { extractPdf, fileHash, type ExtractedLedger } from '@/lib/pdf-extract';
 import { money, uid, type ImportBatch, type ImportMapping, type Workspace, type WorkspaceProps } from '@/lib/types';
 import { AppSelect } from './controls';
+import { InfiniteListFooter, ListSkeleton, useInfiniteList } from './infinite-list';
 import './pdf-import-assistant.css';
 
 type ImportChoices = {
@@ -67,11 +68,11 @@ function savedBatchMatches(actual: ImportBatch | undefined, expected: ImportBatc
     && actual.rows.length === expected.rows.length && (expected.postedRecordIds || []).every(id => actual.postedRecordIds?.includes(id));
 }
 
-export function PdfImportAssistant({ data, update, notify, reviewer = 'Workspace reviewer', onReview, saveState, retrySave, saveConflict }: PdfImportAssistantProps) {
+export function PdfImportAssistant({ ownerId, data, update, notify, reviewer = 'Workspace reviewer', onReview, saveState, retrySave, saveConflict }: PdfImportAssistantProps) {
   const [items, setItems] = useState<QueueItem[]>([]);
   const itemsRef = useRef<QueueItem[]>([]);
   const workspaceRef = useRef(data);
-  workspaceRef.current = data;
+  useLayoutEffect(()=>{workspaceRef.current=data},[data]);
   const [processing, setProcessing] = useState(false);
   const processingRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -82,6 +83,9 @@ export function PdfImportAssistant({ data, update, notify, reviewer = 'Workspace
   const [saved, setSaved] = useState<SavedImport | null>(null);
   const completedRef = useRef('');
   const locked = processing || !!pending;
+  const queueList = useInfiniteList(items,'pdf-upload-queue');
+  const savedDrafts = (saved?.batchIds || []).map(id=>data.imports.find(batch=>batch.id===id)).filter((batch):batch is ImportBatch=>!!batch&&batch.status!=='Posted');
+  const savedDraftList = useInfiniteList(savedDrafts,`saved-pdf-drafts:${saved?.batchIds.join(',')||'none'}`);
 
   function replaceItems(next: QueueItem[]) { itemsRef.current = next; setItems(next); }
   function patchItem(id: string, values: Partial<QueueItem>) { replaceItems(itemsRef.current.map(item => item.id === id ? { ...item, ...values } : item)); }
@@ -109,7 +113,7 @@ export function PdfImportAssistant({ data, update, notify, reviewer = 'Workspace
       let fileKey = item.fileKey;
       if (!fileKey) {
         const form = new FormData(); form.append('file', item.file);
-        const response = await fetch('/api/files', { method: 'POST', body: form });
+        const response = await fetch('/api/files', { method: 'POST', headers:ownerId?{'X-Workspace-Owner':encodeURIComponent(ownerId)}:undefined, body: form });
         const payload = await response.json().catch(() => ({})) as { key?: string; hash?: string; error?: string };
         if (!response.ok) throw new Error(payload.error || 'The original PDF could not be saved. Retry this file.');
         if (!payload.key || payload.hash !== hash) throw new Error('The retained PDF could not be verified. Retry this file.');
@@ -205,7 +209,7 @@ export function PdfImportAssistant({ data, update, notify, reviewer = 'Workspace
     {processing && <p className="pdf-progress" role="status"><Loader2 size={16} className="spin"/>Processing {Math.min(items.length, items.filter(item => item.status === 'ready' || item.status === 'duplicate' || item.status === 'error').length + 1)} of {items.length} PDFs. Keep this page open.</p>}
     {error && <p className="pdf-assistant-error" role="alert"><AlertCircle size={17}/><span>{error}</span></p>}
 
-    {!!items.length && <div className="pdf-file-list" aria-label="Selected PDF statements">{items.map(item => {
+    {!!items.length && <div className="pdf-file-list" aria-label="Selected PDF statements" aria-busy={queueList.loading}>{queueList.visibleItems.map(item => {
       const preview = previews.find(entry => entry.item.id === item.id);
       return <article className="pdf-file" key={item.id} aria-labelledby={`${item.id}-name`}>
         <div className="pdf-file-heading"><FileText size={20} aria-hidden="true"/><div><h4 id={`${item.id}-name`}>{item.file.name}</h4><p>{item.status === 'uploading' ? 'Saving original PDF…' : item.status === 'extracting' ? 'Reading statement rows…' : item.status === 'queued' ? 'Waiting to process' : item.fileKey ? 'Original PDF retained' : item.status === 'duplicate' ? item.duplicateMessage : 'Original PDF not retained'}{item.extraction && ` · ${item.extraction.pages} ${item.extraction.pages === 1 ? 'page' : 'pages'}`}</p></div>
@@ -216,9 +220,11 @@ export function PdfImportAssistant({ data, update, notify, reviewer = 'Workspace
         {item.status === 'duplicate' && item.existing && <div className="pdf-duplicate"><p>{item.duplicateMessage}</p><button type="button" className="button button-secondary" disabled={locked} onClick={() => onReview(item.existing!)}>{item.existing.status === 'Posted' ? 'View existing import' : 'Open existing draft'}</button></div>}
         {item.fileKey && <a className="pdf-source-link" href={`/api/files?key=${encodeURIComponent(item.fileKey)}`} target="_blank" rel="noreferrer">Original PDF</a>}
         {preview?.error && <p className="pdf-assistant-error" role="alert">{preview.error}</p>}
+        {['queued','uploading','extracting'].includes(item.status) && <div className="pdf-extraction-skeleton" role="status" aria-label="Preparing statement preview"><ListSkeleton count={1} variant="card"/></div>}
         {preview?.plan && <FilePreview item={item} plan={preview.plan} disabled={locked} onChange={values => changeChoices(item.id, values)}/>}
       </article>;
     })}</div>}
+    {!!items.length && <InfiniteListFooter list={queueList} label="PDF statements"/>}
 
     {previews.length > 0 && <div className="pdf-confirm">
       {fileErrors && <p className="pdf-confirm-hint">Retry or remove the PDFs that could not be processed before importing.</p>}
@@ -233,7 +239,7 @@ export function PdfImportAssistant({ data, update, notify, reviewer = 'Workspace
     </div>}
 
     {saved && <div className="pdf-saved" role="status"><div><h3>Import saved</h3><p>{saved.posted} {saved.posted === 1 ? 'statement posted' : 'statements posted'} · {saved.drafts} {saved.drafts === 1 ? 'draft to review' : 'drafts to review'} · {saved.companies} {saved.companies === 1 ? 'company added' : 'companies added'}</p></div>
-      {saved.batchIds.map(id => data.imports.find(batch => batch.id === id)).filter((batch): batch is ImportBatch => !!batch && batch.status !== 'Posted').map(batch => <button type="button" className="button button-secondary" key={batch.id} onClick={() => onReview(batch)}>Review exceptions · {batch.name}</button>)}
+      {!!savedDrafts.length&&<div className="pdf-saved-actions">{savedDraftList.visibleItems.map(batch => <button type="button" className="button button-secondary" key={batch.id} onClick={() => onReview(batch)}>Review exceptions · {batch.name}</button>)}<InfiniteListFooter list={savedDraftList} label="saved drafts"/></div>}
     </div>}
   </section>;
 }
@@ -242,6 +248,8 @@ function FilePreview({ item, plan, disabled, onChange }: { item: QueueItem; plan
   const warnings = extractionWarnings(item.extraction);
   const rows = plan.batch.rows.filter(row => row.kind !== 'excluded' && row.status !== 'Excluded');
   const reviewIds = new Set(plan.reviewRows.map(row => row.id));
+  const rowList = useInfiniteList(rows,`pdf-records:${item.id}`);
+  const exceptionList = useInfiniteList(plan.reviewRows,`pdf-exceptions:${item.id}`);
   return <div className="pdf-preview">
     {item.extraction?.metadata.title && <p className="pdf-statement-title">Source title: {item.extraction.metadata.title}</p>}
     <div className="pdf-preview-fields">
@@ -252,13 +260,13 @@ function FilePreview({ item, plan, disabled, onChange }: { item: QueueItem; plan
       <label className="field"><span>History coverage</span><AppSelect aria-label={`History coverage for ${item.file.name}`} value={item.choices.history} disabled={disabled} onValueChange={value => onChange({ history: value as ImportChoices['history'] })} options={['Partial history', 'Complete history'].map(value => ({ value, label: value }))}/></label>
       <div className="pdf-currency"><span>Workspace currency</span><strong>{plan.batch.mapping.currency}</strong></div>
     </div>
-    <dl className="pdf-preview-totals"><div><dt>Source rows</dt><dd>{rows.length}</dd></div><div><dt>Goods total</dt><dd>{money(plan.totals.goods, 2)}</dd></div><div><dt>Payments total</dt><dd>{money(plan.totals.paid, 2)}</dd></div><div><dt>Calculated closing</dt><dd>{money(plan.totals.closing, 2)}</dd></div></dl>
+    <dl className="pdf-preview-totals"><div><dt>Source rows</dt><dd>{rows.length}</dd></div><div><dt>Goods total</dt><dd className={money(plan.totals.goods,2).length>18?'pdf-long-amount':undefined}>{money(plan.totals.goods, 2)}</dd></div><div><dt>Payments total</dt><dd className={money(plan.totals.paid,2).length>18?'pdf-long-amount':undefined}>{money(plan.totals.paid, 2)}</dd></div><div><dt>Calculated closing</dt><dd className={money(plan.totals.closing,2).length>18?'pdf-long-amount':undefined}>{money(plan.totals.closing, 2)}</dd></div></dl>
     <p className="pdf-row-readiness">{plan.readyRows} rows prepared · {plan.reviewRows.length} rows need review{plan.batch.mapping.expectedClosing && <span> · Printed closing {money(plan.batch.mapping.expectedClosing, 2)}</span>}</p>
     <details className="pdf-records"><summary>Preview extracted records ({rows.length})</summary>
-      <p className="pdf-records-hint">Swipe across the table to see amounts and proposed payment details.</p>
+      <p className="pdf-records-hint">Review the source values and proposed payment details for each record.</p>
       <div className="pdf-records-scroll" tabIndex={0} role="region" aria-label={`Extracted records from ${item.file.name}`}>
-        <table className="pdf-records-table"><caption className="hf-visually-hidden">Proposed records from {item.file.name}. Amounts in {plan.batch.mapping.currency}.</caption><thead><tr><th scope="col">Source</th><th scope="col">Description</th><th scope="col">Delivery party</th><th scope="col">Goods</th><th scope="col">Payment</th><th scope="col">Proposed payment details</th><th scope="col">Review state</th></tr></thead>
-          <tbody>{rows.map(row => <tr key={row.id}>
+        <table className="pdf-records-table hf-desktop-only"><caption className="hf-visually-hidden">Proposed records from {item.file.name}. Amounts in {plan.batch.mapping.currency}.</caption><thead><tr><th scope="col">Source</th><th scope="col">Description</th><th scope="col">Delivery party</th><th scope="col">Goods</th><th scope="col">Payment</th><th scope="col">Proposed payment details</th><th scope="col">Review state</th></tr></thead>
+          <tbody>{rowList.visibleItems.map(row => <tr key={row.id}>
             <th scope="row" className="pdf-record-source">{row.rawDate || 'Undated'}<small>Page {row.page} · Row {row.sequence}</small>{row.effectiveDate && row.effectiveDate !== row.rawDate && <small>Proposed: {row.effectiveDate}</small>}</th>
             <td className="pdf-record-description">{row.description || '—'}<details className="pdf-record-raw"><summary>Source text</summary><p>{row.raw}</p></details></td>
             <td>{row.party || '—'}</td><td className="pdf-record-amount">{row.goods ? money(row.goods, 2) : '—'}</td><td className="pdf-record-amount">{row.paid ? money(row.paid, 2) : '—'}</td>
@@ -266,12 +274,14 @@ function FilePreview({ item, plan, disabled, onChange }: { item: QueueItem; plan
             <td><span className={`pdf-file-status ${reviewIds.has(row.id) ? 'pdf-status-review' : 'pdf-status-ready'}`}>{reviewIds.has(row.id) ? 'Needs review' : 'Prepared'}</span></td>
           </tr>)}</tbody>
         </table>
+        <div className="hf-record-cards hf-mobile-only pdf-record-cards" role="list" aria-label={`Extracted records from ${item.file.name}`}>{rowList.visibleItems.map(row=><article key={row.id} role="listitem" className="hf-record-card pdf-record-card" data-testid="pdf-row-card" data-record-id={row.id}><header className="hf-record-card-header"><div className="hf-record-card-title"><h5>{row.description||row.party||'Source record'}</h5><p className="hf-record-card-subtitle">{row.rawDate||'Undated'} · Page {row.page} · Row {row.sequence}</p>{row.effectiveDate&&row.effectiveDate!==row.rawDate&&<p className="hf-record-card-subtitle">Proposed: {row.effectiveDate}</p>}</div><span className={`pdf-file-status ${reviewIds.has(row.id)?'pdf-status-review':'pdf-status-ready'}`}>{reviewIds.has(row.id)?'Needs review':'Prepared'}</span></header><dl className="hf-record-card-meta"><div><dt>Goods · {plan.batch.mapping.currency}</dt><dd className={row.goods&&money(row.goods,2).length>18?'pdf-long-amount':undefined}>{row.goods?money(row.goods,2):'—'}</dd></div><div><dt>Payment · {plan.batch.mapping.currency}</dt><dd className={row.paid&&money(row.paid,2).length>18?'pdf-long-amount':undefined}>{row.paid?money(row.paid,2):'—'}</dd></div><div><dt>Delivery party</dt><dd>{row.party||'—'}</dd></div>{row.paid&&Number(row.paid)!==0&&<><div><dt>Payment actor</dt><dd>{row.actor||'Not confirmed'}</dd></div><div><dt>Treatment</dt><dd>{row.treatment||'Not confirmed'}</dd></div><div><dt>Allocation</dt><dd>{row.companyId&&row.companyId===plan.company?.id?plan.company.name:row.companyId?'Different company — review':'Not confirmed'}</dd></div></>}</dl><details className="pdf-record-raw"><summary>Original source text</summary><p>{row.raw}</p></details></article>)}</div>
+        <InfiniteListFooter list={rowList} label="extracted records"/>
       </div>
     </details>
     {(warnings.length > 0 || plan.blockers.length > 0 || plan.reviewRows.length > 0) && <details className="pdf-exceptions"><summary>Review remaining information</summary>
       {!!(warnings.length || plan.blockers.length) && <ul>{[...new Set([...warnings, ...plan.blockers])].map(message => <li key={message}>{message}</li>)}</ul>}
-      {!!plan.reviewRows.length && <ul>{plan.reviewRows.slice(0, 5).map(row => <li key={row.id}>Page {row.page}, row {row.sequence}: {row.issues.join(' ') || 'Additional accounting review is required.'}</li>)}</ul>}
-      {plan.reviewRows.length > 5 && <p>{plan.reviewRows.length - 5} more rows remain in the draft for detailed review.</p>}
+      {!!plan.reviewRows.length && <ul>{exceptionList.visibleItems.map(row => <li key={row.id}>Page {row.page}, row {row.sequence}: {row.issues.join(' ') || 'Additional accounting review is required.'}</li>)}</ul>}
+      {!!plan.reviewRows.length&&<InfiniteListFooter list={exceptionList} label="exceptions"/>}
     </details>}
   </div>;
 }

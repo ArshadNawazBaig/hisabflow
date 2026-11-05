@@ -7,5 +7,6 @@ declare namespace Cloudflare {
     SUPABASE_SECRET_KEY?: string;
     SUPABASE_PUBLISHABLE_KEY?: string;
     HISABFLOW_APP_ORIGIN?: string;
+    HISABFLOW_LOCAL_RUNTIME?: string;
   }
 }

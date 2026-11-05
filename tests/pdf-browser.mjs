@@ -1,3 +1,4 @@
+import { browserLaunchOptions } from './browser-support.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -51,7 +52,7 @@ let browser;
 try {
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
   const origin=`http://127.0.0.1:${server.address().port}`;
-  browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
+  browser=await chromium.launch(browserLaunchOptions());
   for(const removeIterator of [false,true]) {
     const context=await browser.newContext();
     try {

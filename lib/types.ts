@@ -11,7 +11,19 @@ export type ImportMapping = { business: string; issuer: string; counterpartyId: 
 export type ImportBatch = { id: string; name: string; hash: string; createdAt: string; status: 'Draft' | 'Posted'; step: number; mapping: ImportMapping; rows: SourceRow[]; fileKey?: string; postedAt?: string; postedRecordIds?: string[]; createdCompanyId?: string; sourceMetadata?: LedgerMetadata; sourcePages?: number; };
 export type AuditEvent = { id: string; at: string; action: string; detail: string; actor: string; sourceRef?: string };
 export type Workspace = { business: string; currency: string; companies: Company[]; shipments: Shipment[]; payments: Payment[]; imports: ImportBatch[]; audit: AuditEvent[]; openingCash: string; };
-export type WorkspaceProps = { data: Workspace; update: (next: Workspace, action: string, detail: string) => void; notify: (message: string) => void; saveState?: 'saved' | 'saving' | 'error'; saveConflict?: boolean; retrySave?: () => void; };
-export const money = (v: string | number, decimals = 0) => Number(v || 0).toLocaleString('en-PK', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+export type WorkspaceProps = { ownerId?:string; data: Workspace; update: (next: Workspace, action: string, detail: string) => void; notify: (message: string) => void; saveState?: 'saved' | 'saving' | 'error'; saveConflict?: boolean; retrySave?: () => void; };
+/** Keep decimal strings exact while grouping and rounding their display value. */
+export function money(v: string | number, decimals = 0): string {
+  const formatter = new Intl.NumberFormat('en-PK', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  const value = String(v || 0).trim(), match = /^([+-]?)(\d+)(?:\.(\d+))?$/.exec(value);
+  if (!match) return formatter.format(Number(v || 0));
+  const places = formatter.resolvedOptions().maximumFractionDigits ?? decimals;
+  const fraction = match[3] || '';
+  const scale = BigInt(10) ** BigInt(places);
+  let units = BigInt(match[2]) * scale + BigInt(fraction.slice(0, places).padEnd(places, '0') || '0');
+  if (fraction.length > places && Number(fraction[places]) >= 5) units++;
+  const whole = new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(units / scale);
+  return `${match[1] === '-' ? '-' : ''}${whole}${places ? `.${(units % scale).toString().padStart(places, '0')}` : ''}`;
+}
 export const today = () => new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Karachi', year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
 export const uid = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0,8).toUpperCase()}`;

@@ -3,16 +3,17 @@ import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { HISABFLOW_SUPABASE_URL } from './supabase-workspace';
 import { AuthIdentityError, createIdentityStore } from './auth-identities';
-import { AUTH_COOKIE_NAME, AUTH_PROVIDER_COOKIE, AUTH_FLOW_COOKIE, AUTH_FLOW_TTL_MS, AUTH_RESPONSE_HEADERS, isGoogleSessionCookie, isGooglePkceCookie, WorkspaceAuthError, checkedGoogleIdentity, checkedProductionOrigin, resolveWorkspaceIdentity, type WorkspaceUser } from './auth-policy';
+import { AUTH_COOKIE_NAME, AUTH_PROVIDER_COOKIE, AUTH_FLOW_COOKIE, AUTH_FLOW_TTL_MS, AUTH_RESPONSE_HEADERS, isGoogleSessionCookie, isGooglePkceCookie, WorkspaceAuthError, checkedGoogleIdentity, checkedProductionOrigin, allowLocalAuthentication, resolveWorkspaceIdentity, type WorkspaceUser } from './auth-policy';
 
 export { AUTH_RESPONSE_HEADERS, WorkspaceAuthError } from './auth-policy';
 export type { WorkspaceUser } from './auth-policy';
-export const authCookieOptions = () => ({path:'/',httpOnly:true,secure:!import.meta.env.DEV,sameSite:'lax' as const});
+export const localAuthAllowed = () => allowLocalAuthentication(import.meta.env.DEV, env.HISABFLOW_LOCAL_RUNTIME);
+export const authCookieOptions = () => ({path:'/',httpOnly:true,secure:!localAuthAllowed(),sameSite:'lax' as const});
 
 function configuredPublicKey(): string {
   const key = env.SUPABASE_PUBLISHABLE_KEY || '';
   if (env.SUPABASE_URL !== HISABFLOW_SUPABASE_URL || !/^sb_publishable_[A-Za-z0-9_-]+$/.test(key)) throw new WorkspaceAuthError('configuration');
-  if (!import.meta.env.DEV) checkedProductionOrigin(env.HISABFLOW_APP_ORIGIN);
+  if (!localAuthAllowed()) checkedProductionOrigin(env.HISABFLOW_APP_ORIGIN);
   return key;
 }
 export function googleAuthConfigured(): boolean {

@@ -1,0 +1,35 @@
+{
+  "id": "/",
+  "name": "HisabFlow",
+  "short_name": "HisabFlow",
+  "description": "Your private workspace for companies, deliveries, payments, and reviewed statement imports.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f6f5",
+  "theme_color": "#176b47",
+  "categories": ["business", "finance", "productivity"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

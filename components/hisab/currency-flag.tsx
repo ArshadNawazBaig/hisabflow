@@ -4,15 +4,14 @@ import AE from 'country-flag-icons/react/3x2/AE';
 import GB from 'country-flag-icons/react/3x2/GB';
 import EU from 'country-flag-icons/react/3x2/EU';
 
-const flags = new Map([
-  ['PKR', PK],
-  ['USD', US],
-  ['AED', AE],
-  ['GBP', GB],
-  ['EUR', EU],
-]);
-
 export function CurrencyFlag({ currency }: { currency: string }) {
-  const Flag = flags.get(currency.trim().toUpperCase());
-  return Flag ? <Flag className="currency-flag" aria-hidden="true" tabIndex={-1}/> : null;
+  const props={className:'currency-flag','aria-hidden':true as const,tabIndex:-1};
+  switch(currency.trim().toUpperCase()) {
+    case 'PKR': return <PK {...props}/>;
+    case 'USD': return <US {...props}/>;
+    case 'AED': return <AE {...props}/>;
+    case 'GBP': return <GB {...props}/>;
+    case 'EUR': return <EU {...props}/>;
+    default: return null;
+  }
 }

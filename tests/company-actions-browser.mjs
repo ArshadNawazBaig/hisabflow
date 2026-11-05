@@ -1,3 +1,4 @@
+import { browserLaunchOptions } from './browser-support.mjs';
 import { build } from 'esbuild';
 import { chromium } from '@playwright/test';
 import { createServer } from 'node:http';
@@ -25,13 +26,14 @@ const server = createServer(async (request, response) => {
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
-const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+const browser = await chromium.launch(browserLaunchOptions());
 let failurePage;
 
 async function openCompanies(page, mobile = false) {
   await page.goto(base, { waitUntil: 'networkidle' });
   await (mobile ? page.locator('.side-rail nav') : page.locator('.top-navigation')).getByRole('button', { name: 'Companies', exact: true }).click();
-  await page.getByRole('columnheader', { name: 'Actions', exact: true }).waitFor();
+  if (mobile) await page.locator('.rv-record-cards').getByRole('article').first().waitFor();
+  else await page.getByRole('columnheader', { name: 'Actions', exact: true }).waitFor();
 }
 const actionTrigger = (page, name) => page.getByRole('button', { name: `Actions for ${name}`, exact: true });
 async function chooseAction(page, name, action) {
@@ -145,7 +147,7 @@ try {
   assert.equal(await retryDialog.isVisible(), true);
   assert.match(await retryDialog.textContent(), /not been saved/i);
   assert.equal(await retryPage.locator('.toast').filter({ hasText: /deleted/i }).count(), 0);
-  assert.equal(await actionTrigger(retryPage, unused).count(), 1);
+  assert.equal(await actionTrigger(retryPage, unused).count(), 0, 'The unsaved deletion stays visible while its retry is pending.');
   await retryDialog.getByRole('button', { name: 'Retry save', exact: true }).click();
   await retryPage.waitForFunction(() => window.__companyActionsQA.pendingCount === 1 && window.__companyActionsQA.requests.length === 2);
   await retryPage.evaluate(() => window.__companyActionsQA.releaseSave());
@@ -155,6 +157,65 @@ try {
   assert.equal(await actionTrigger(retryPage, unused).count(), 0);
   assert.deepEqual(retryErrors, []);
   await retryContext.close();
+
+  // A new action after a failed request must build on the unsaved snapshot.
+  // Otherwise retrying deletion followed by adding a company restores the deleted row.
+  const queueContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const queuePage = await queueContext.newPage();failurePage=queuePage;
+  await openCompanies(queuePage);
+  await chooseAction(queuePage, unused, 'Delete');
+  let queueDialog=queuePage.getByRole('dialog',{name:'Delete company',exact:true});
+  await queueDialog.getByRole('button',{name:'Delete company',exact:true}).click();
+  await queuePage.waitForFunction(()=>window.__companyActionsQA.pendingCount===1);
+  await queuePage.evaluate(()=>window.__companyActionsQA.releaseSave(503));
+  await queueDialog.getByRole('button',{name:'Retry save',exact:true}).waitFor();
+  await queueDialog.getByRole('button',{name:'Close',exact:true}).click();
+  await queuePage.getByRole('button',{name:'Add company',exact:true}).click();
+  queueDialog=queuePage.getByRole('dialog',{name:'A new connection',exact:true});
+  await queueDialog.locator('input[name="name"]').fill('Queued QA Co');
+  await queueDialog.getByRole('button',{name:'Save company',exact:true}).click();
+  await queuePage.waitForFunction(()=>window.__companyActionsQA.pendingCount===1&&window.__companyActionsQA.requests.length===2);
+  await queuePage.evaluate(()=>window.__companyActionsQA.releaseSave());
+  await queuePage.waitForFunction(()=>window.__companyActionsQA.pendingCount===1&&window.__companyActionsQA.requests.length===3);
+  await queuePage.locator('.app-footer .save-status').getByText('Saving…',{exact:true}).waitFor();
+  assert.equal(await queuePage.evaluate(()=>window.__companyActionsQA.snapshot().companies.some(c=>c.name==='Queued QA Co')),false);
+  await queuePage.evaluate(()=>window.__companyActionsQA.releaseSave());
+  await queuePage.locator('.app-footer .save-status').getByText('Saved',{exact:true}).waitFor();
+  const queued=await queuePage.evaluate(()=>window.__companyActionsQA.snapshot());
+  assert.equal(queued.companies.some(c=>c.id==='CO-UNUSED'),false,'A later queued action must preserve the failed deletion.');
+  assert.equal(queued.companies.filter(c=>c.name==='Queued QA Co').length,1);
+  await queueContext.close();
+
+  const identityContext=await browser.newContext(),identityPage=await identityContext.newPage();failurePage=identityPage;
+  await openCompanies(identityPage);
+  await chooseAction(identityPage,unused,'Delete');
+  const identityDialog=identityPage.getByRole('dialog',{name:'Delete company',exact:true});
+  await identityDialog.getByRole('button',{name:'Delete company',exact:true}).click();
+  await identityPage.waitForFunction(()=>window.__companyActionsQA.pendingCount===1);
+  await identityPage.evaluate(()=>window.__companyActionsQA.releaseSave(401));
+  await identityPage.locator('.workspace-save-error').getByRole('link',{name:/Sign in again/}).waitFor();
+  assert.equal(await identityPage.evaluate(()=>window.__companyActionsQA.snapshot().companies.some(c=>c.id==='CO-UNUSED')),true);
+  await identityPage.evaluate(()=>window.__companyActionsQA.setOwner('DIFFERENT-OWNER'));
+  await identityDialog.getByRole('button',{name:'Retry save',exact:true}).click();
+  await identityPage.locator('.workspace-save-error').getByText(/This tab belongs to/).waitFor();
+  assert.equal(await identityPage.evaluate(()=>window.__companyActionsQA.pendingCount),0,'An account mismatch must reject the request before any write.');
+  assert.equal(await actionTrigger(identityPage,unused).count(),0,'Keep the original pending change after the rejected account switch.');
+  await identityPage.evaluate(()=>window.__companyActionsQA.setOwner('QA-OWNER'));
+  await identityDialog.getByRole('button',{name:'Retry save',exact:true}).click();
+  await identityPage.waitForFunction(()=>window.__companyActionsQA.pendingCount===1);
+  await identityPage.evaluate(()=>window.__companyActionsQA.releaseSave());
+  await identityDialog.waitFor({state:'hidden'});
+  assert.equal(await identityPage.evaluate(()=>window.__companyActionsQA.snapshot().companies.some(c=>c.id==='CO-UNUSED')),false);
+  await identityContext.close();
+
+  const restrictedContext=await browser.newContext();
+  await restrictedContext.addInitScript(()=>{Storage.prototype.getItem=()=>{throw new Error('Storage disabled')};Storage.prototype.setItem=()=>{throw new Error('Storage disabled')};Storage.prototype.removeItem=()=>{throw new Error('Storage disabled')};});
+  const restricted=await restrictedContext.newPage(),restrictedErrors=[];failurePage=restricted;
+  restricted.on('pageerror',error=>restrictedErrors.push(error.message));
+  await restricted.goto(`${base}/#%E0%A4%A`,{waitUntil:'networkidle'});
+  await restricted.getByRole('heading',{name:'Welcome back.',exact:true}).waitFor();
+  assert.deepEqual(restrictedErrors,[],'Browser storage and invalid URL fragments must not prevent loading.');
+  await restrictedContext.close();
 
   const mobileContext = await browser.newContext({ viewport: { width: 320, height: 844 }, isMobile: true, hasTouch: true });
   await mobileContext.addInitScript(() => localStorage.setItem('hisab-theme', 'dark'));
@@ -172,7 +233,7 @@ try {
   await mobile.keyboard.press('Escape'); await assertFocusReturned(mobile, unused);
   assert.deepEqual(mobileErrors, []);
   await mobileContext.close();
-  console.log('PASS company row actions: accessible menus, focus return, View/Edit, delete cancellation/restrictions, acknowledged deletion, failed-save retry, preserved history, and 320px dark popup bounds.');
+  console.log('PASS company row actions: accessible menus, focus return, View/Edit, delete cancellation/restrictions, acknowledged deletion, failed-save retry, lossless save queue, expired-session/account-switch recovery, restricted storage, preserved history, and 320px dark popup bounds.');
 } catch (error) {
   await failurePage?.screenshot({ path: 'outputs/company-actions-failure.png', animations: 'disabled' }).catch(() => {});
   throw error;
