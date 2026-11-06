@@ -12,9 +12,10 @@ try{
     const {path,...requestOptions}=options;
     const response=await context.request.get(base+path,{...requestOptions,maxRedirects:0});
     assert.equal(response.status(),307);
-    assert.equal(response.headers().location,'/login');
+    assert.equal(new URL(response.headers().location,base).href,base+'/login');
     assert.match(response.headers()['cache-control'],/no-store/);
-    assert.equal(await response.text(),'');
+    // Hosting platforms may add a generic body to an otherwise empty redirect.
+    assert.match(await response.text(),/^(?:Redirecting\.\.\.\n?)?$/);
   }
   assert.equal((await context.request.get(base+'/api/workspace')).status(),401);
   const page=await context.newPage();
@@ -48,7 +49,9 @@ try{
   await page.getByRole('alert').filter({hasText:'Reset sign-in'}).waitFor();
   await page.getByRole('button',{name:'Reset sign-in',exact:true}).click();
   await page.waitForURL(base+'/login');
-  assert.equal(await page.getByRole('alert').count(),0);
+  await page.waitForLoadState('networkidle');
+  // Next.js also mounts an accessibility route announcer with role="alert".
+  assert.equal(await page.locator('.auth-page-error').count(),0);
   const started=await context.request.post(base+'/auth/google',{headers:{Origin:base},form:{intent:'signin'},maxRedirects:0});
   assert.equal(started.status(),303);
   const authorize=new URL(started.headers().location);

@@ -4,6 +4,7 @@ import { cloneElement, isValidElement, useEffect, useEffectEvent, useLayoutEffec
 import { AlertCircle, ArrowDownToLine, ArrowLeft, ArrowRight, Check, CheckCheck, CheckCircle2, ChevronDown, ChevronRight, FileCheck2, FileText, Fingerprint, Info, Layers3, Loader2, LockKeyhole, Save, ScanLine, ShieldCheck, Trash2, Upload, X } from 'lucide-react';
 import { money, uid, type ImportBatch, type ImportMapping, type SourceRow, type Treatment, type WorkspaceProps } from '@/lib/types';
 import { extractLedgerText, extractPdf, fileHash, suggestedDate } from '@/lib/pdf-extract';
+import { uploadPrivateFile } from '@/lib/private-file-upload';
 import { reconcile, validateImport, postImport, multiply, add, subtract, validMoney, importDeletionReason } from '@/lib/accounting';
 import { parseISODate } from '@/lib/control-dates';
 import { AppSelect, AppDatePicker } from './controls';
@@ -119,10 +120,8 @@ export function ImportWorkflow({ownerId,data,update,notify,saveState='saved',sav
       if(existing&&(existing.fileKey||existing.status==='Posted')) {setManualOpen(false);setBatch(existing);notify(`This source already has a ${existing.status.toLowerCase()} import. Opened the existing batch.`);return;}
       let fileKey:string|undefined;
       try {
-        const form=new FormData();form.append('file',sourceFile);
-        const response=await fetch('/api/files',{method:'POST',headers:ownerId?{'X-Workspace-Owner':encodeURIComponent(ownerId)}:undefined,body:form});
-        const payload=await response.json() as {key?:string;error?:string};
-        if(response.ok && payload.key) fileKey=payload.key;
+        const payload=await uploadPrivateFile(sourceFile,ownerId);
+        if(payload.key && (!payload.hash || payload.hash===hash)) fileKey=payload.key;
         else notify('The original file is not yet saved to your private workspace. Posting will remain blocked.');
       } catch { notify('Your original file has not yet been saved. Posting will remain blocked.'); }
       if(existing){setManualOpen(false);const retained={...existing,fileKey};setBatch(retained);setPendingOriginal(fileKey?null:sourceFile);if(fileKey){saveBatch(retained,'Statement original retained');notify('Original source retained. Continue reviewing the existing draft.');}return;}

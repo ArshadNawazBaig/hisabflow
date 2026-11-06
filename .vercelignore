@@ -1,0 +1,32 @@
+# Private environment, authentication, and local storage
+.env*
+.dev.vars*
+*.pem
+/.cloudflare/
+/.wrangler/
+/.sites-runtime/
+/.vercel/
+
+# Dependencies, generated builds, and local tool state
+/node_modules/
+/.git/
+/.next/
+/.vinext/
+/dist/
+/out/
+next-env.d.ts
+*.tsbuildinfo
+/.agents/
+/.codex/
+.DS_Store
+*.log
+
+# Local validation and publication artifacts
+/tests/
+/examples/
+/docs/
+/coverage/
+/playwright-report/
+/test-results/
+/outputs/
+/work/

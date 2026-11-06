@@ -6,6 +6,7 @@ import type { Workspace } from '@/lib/types';
 import { getWorkspaceStore, configuredWorkspaceProvider, workspaceStorageMessage } from '@/lib/server/workspace-store';
 import { readBoundedBody, RequestBodyTooLargeError } from '@/lib/server/request-body';
 import { workspaceOwnerFailure } from '@/lib/server/workspace-access';
+import { createSupabaseFileStore } from '@/lib/server/supabase-files';
 
 export const dynamic = 'force-dynamic';
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers: AUTH_RESPONSE_HEADERS });
@@ -52,7 +53,9 @@ export async function PUT(request: Request) {
     for (const batch of incoming.imports.filter(b => b.status === 'Posted' && !previous?.imports.some(p => p.id === b.id && p.status === 'Posted'))) {
       // Uploaded files are only accepted when they belong to the authenticated owner.
       if (!batch.fileKey?.startsWith(`owners/${encodeURIComponent(user.userId)}/${batch.hash}/`)) return json({error:'The source file does not belong to this workspace or its hash differs.'},403);
-      const file = await env.BUCKET?.head(batch.fileKey);
+      const file = env.BUCKET
+        ? await env.BUCKET.head(batch.fileKey)
+        : await createSupabaseFileStore({url:env.SUPABASE_URL || '',secretKey:env.SUPABASE_SECRET_KEY || ''}).verifyHead(batch.fileKey,user.userId,batch.hash);
       if (!file || file.customMetadata?.ownerId !== user.userId || file.customMetadata.hash !== batch.hash) return json({error:'The retained source file could not be verified.'},400);
     }
     const now = new Date().toISOString();

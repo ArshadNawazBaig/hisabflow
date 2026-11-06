@@ -3,11 +3,12 @@ import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { HISABFLOW_SUPABASE_URL } from './supabase-workspace';
 import { AuthIdentityError, createIdentityStore } from './auth-identities';
+import { createSupabaseIdentityStore } from './supabase-identities';
 import { AUTH_COOKIE_NAME, AUTH_PROVIDER_COOKIE, AUTH_FLOW_COOKIE, AUTH_FLOW_TTL_MS, AUTH_RESPONSE_HEADERS, isGoogleSessionCookie, isGooglePkceCookie, WorkspaceAuthError, checkedGoogleIdentity, checkedProductionOrigin, allowLocalAuthentication, resolveWorkspaceIdentity, type WorkspaceUser } from './auth-policy';
 
 export { AUTH_RESPONSE_HEADERS, WorkspaceAuthError } from './auth-policy';
 export type { WorkspaceUser } from './auth-policy';
-export const localAuthAllowed = () => allowLocalAuthentication(import.meta.env.DEV, env.HISABFLOW_LOCAL_RUNTIME);
+export const localAuthAllowed = () => allowLocalAuthentication(process.env.NODE_ENV === 'development', env.HISABFLOW_LOCAL_RUNTIME);
 export const authCookieOptions = () => ({path:'/',httpOnly:true,secure:!localAuthAllowed(),sameSite:'lax' as const});
 
 function configuredPublicKey(): string {
@@ -20,8 +21,11 @@ export function googleAuthConfigured(): boolean {
   try { configuredPublicKey(); return true; } catch { return false; }
 }
 export function identityStore() {
-  if (!env.DB) throw new WorkspaceAuthError('configuration');
-  return createIdentityStore(env.DB);
+  if (env.DB) return createIdentityStore(env.DB);
+  if (env.WORKSPACE_STORAGE_PROVIDER === 'supabase') {
+    return createSupabaseIdentityStore({url:env.SUPABASE_URL || '',secretKey:env.SUPABASE_SECRET_KEY || ''});
+  }
+  throw new WorkspaceAuthError('configuration');
 }
 
 /** Fixed-origin transport; manual redirects protect headers in Workers. */

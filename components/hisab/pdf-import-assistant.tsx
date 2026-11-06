@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, Check, FileText, Loader2, Upload, X } from 'lucide-react';
 import { createAutomaticDraft, prepareAutomaticImport, commitAutomaticImports } from '@/lib/import-automation';
 import { extractPdf, fileHash, type ExtractedLedger } from '@/lib/pdf-extract';
+import { uploadPrivateFile } from '@/lib/private-file-upload';
 import { money, uid, type ImportBatch, type ImportMapping, type Workspace, type WorkspaceProps } from '@/lib/types';
 import { AppSelect } from './controls';
 import { InfiniteListFooter, ListSkeleton, useInfiniteList } from './infinite-list';
@@ -112,10 +113,7 @@ export function PdfImportAssistant({ ownerId, data, update, notify, reviewer = '
       }
       let fileKey = item.fileKey;
       if (!fileKey) {
-        const form = new FormData(); form.append('file', item.file);
-        const response = await fetch('/api/files', { method: 'POST', headers:ownerId?{'X-Workspace-Owner':encodeURIComponent(ownerId)}:undefined, body: form });
-        const payload = await response.json().catch(() => ({})) as { key?: string; hash?: string; error?: string };
-        if (!response.ok) throw new Error(payload.error || 'The original PDF could not be saved. Retry this file.');
+        const payload = await uploadPrivateFile(item.file, ownerId);
         if (!payload.key || payload.hash !== hash) throw new Error('The retained PDF could not be verified. Retry this file.');
         fileKey = payload.key;
         patchItem(id, { fileKey });

@@ -14,6 +14,6 @@ export async function GET(request: Request) {
     const probeSupabase = new URL(request.url).searchParams.get('probe') === 'supabase';
     // A readiness probe never migrates records or freezes the D1 source.
     const row = probeSupabase ? await configuredSupabaseStore().get(user.userId) : await getWorkspaceStore().get(user.userId);
-    return json({provider,checked:probeSupabase?'supabase':provider,connected:true,workspaceFound:!!row,supabaseConfigured:!!env.SUPABASE_URL&&!!env.SUPABASE_SECRET_KEY,projectUrl:HISABFLOW_SUPABASE_URL,documents:'r2'});
+    return json({provider,checked:probeSupabase?'supabase':provider,connected:true,workspaceFound:!!row,supabaseConfigured:!!env.SUPABASE_URL&&!!env.SUPABASE_SECRET_KEY,projectUrl:HISABFLOW_SUPABASE_URL,documents:env.BUCKET?'r2':'supabase'});
   } catch(error) {return json({connected:false,error:workspaceStorageMessage(error)},503);}
 }

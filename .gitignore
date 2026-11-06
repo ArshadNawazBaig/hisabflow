@@ -36,6 +36,7 @@ yarn-error.log*
 /.wrangler/
 /.sites-runtime/
 /.cloudflare/
+/.vercel/
 
 # Workspace scaffolding and publication archives
 /.agents/
@@ -45,3 +46,4 @@ yarn-error.log*
 
 # OS metadata
 .DS_Store
+.vercel

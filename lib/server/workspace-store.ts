@@ -67,7 +67,10 @@ export function configuredSupabaseStore() {
 }
 export function getWorkspaceStore(): WorkspaceStore {
   const provider = configuredWorkspaceProvider();
-  if (!env.DB) throw new WorkspaceStorageError('configuration');
+  if (!env.DB) {
+    if (provider === 'supabase') return configuredSupabaseStore();
+    throw new WorkspaceStorageError('configuration');
+  }
   if (provider === 'd1') return d1Store(env.DB);
   return createMigratingWorkspaceStore(configuredSupabaseStore(),legacySource(env.DB),HISABFLOW_SUPABASE_URL);
 }

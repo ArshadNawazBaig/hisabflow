@@ -43,21 +43,21 @@ type FlowRow = {
   created_at: unknown;
 };
 
-function checkedId(value: unknown): string {
+export function checkedId(value: unknown): string {
   if (typeof value !== 'string' || !value.trim() || value.length > 200 || /[\u0000-\u001f\u007f]/.test(value)) {
     throw new AuthIdentityError('invalid-data');
   }
   return value;
 }
-function checkedHash(value: unknown): string {
+export function checkedHash(value: unknown): string {
   if (typeof value !== 'string' || !/^[0-9a-f]{64}$/.test(value)) throw new AuthIdentityError('invalid-data');
   return value;
 }
-function checkedTime(value: unknown): number {
+export function checkedTime(value: unknown): number {
   if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) throw new AuthIdentityError('invalid-data');
   return value;
 }
-function checkedFlow(value: OAuthFlow): OAuthFlow {
+export function checkedFlow(value: OAuthFlow): OAuthFlow {
   const nonceHash = checkedHash(value?.nonceHash);
   const createdAt = checkedTime(value?.createdAt), expiresAt = checkedTime(value?.expiresAt);
   if (expiresAt <= createdAt || expiresAt - createdAt > 600_000) throw new AuthIdentityError('invalid-data');
